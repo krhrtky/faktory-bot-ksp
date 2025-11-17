@@ -1,0 +1,16 @@
+{
+  "id": "initial-ksp-implementation",
+  "type": "feature",
+  "branch": "master",
+  "created": "2025-11-17T00:00:00Z",
+  "lastActive": "2025-11-17T00:00:00Z",
+  "description": "faktory-bot KSP版の初期実装 - 実行時検証を型レベル・コンパイル時検証に移行",
+  "relatedFiles": [
+    "CLAUDE.md",
+    "build.gradle.kts",
+    "settings.gradle.kts",
+    "faktory-ksp/src/main/kotlin/com/example/faktory/ksp/FactoryProcessor.kt",
+    "faktory-runtime/src/main/kotlin/com/example/faktory/core/"
+  ],
+  "status": "active"
+}
