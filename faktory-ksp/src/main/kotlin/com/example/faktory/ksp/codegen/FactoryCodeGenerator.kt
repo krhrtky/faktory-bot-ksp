@@ -29,6 +29,22 @@ object FactoryCodeGenerator {
         return builder.toString()
     }
 
+    fun generateComplete(
+        tableName: String,
+        recordClassName: String,
+        metadata: TableMetadata,
+        foreignKeys: List<ForeignKeyConstraint>,
+    ): String {
+        val phantomTypes = PhantomTypeGenerator.generate(recordClassName, metadata)
+        val builder = BuilderCodeGenerator.generate(recordClassName, metadata)
+
+        return """
+            $phantomTypes
+
+            $builder
+        """.trimIndent()
+    }
+
     private fun String.toCamelCase(): String =
         split("_").joinToString("") { it.replaceFirstChar { c -> c.uppercaseChar() } }
 }
