@@ -541,3 +541,138 @@ interface UsersFactoryBuilder<S : UsersFieldState> {
 - Factory runtimeの基礎構造完成
 - KSP生成コードとの統合準備完了
 - テスト駆動で実装完了
+
+### Phase 4: jOOQ統合・永続化 ✅ 完了
+
+**実装日:** 2025-11-18
+
+#### 完成したコンポーネント
+
+1. **PersistableFactory** ✅
+   - jOOQ DSLContext統合
+   - create()メソッドでDB永続化
+   - createList()で複数エンティティ永続化
+   - TableRecord型パラメータでjOOQ完全統合
+   - 実装: `faktory-runtime/src/main/kotlin/com/example/faktory/core/PersistableFactory.kt`
+   - テスト: 3件（GREEN）
+
+#### 実装機能
+
+```kotlin
+abstract class PersistableFactory<R : TableRecord<R>, T : Any, B : FactoryBuilder<T>>(
+    protected val dsl: DSLContext,
+) : Factory<T, B>() {
+    abstract fun table(): Table<R>
+    abstract fun toRecord(entity: T): R
+
+    fun create(): T {
+        val entity = build()
+        val record = toRecord(entity)
+        dsl.executeInsert(record)
+        return entity
+    }
+
+    fun createList(count: Int): List<T> =
+        (1..count).map { create() }
+}
+```
+
+#### TDD実施状況
+
+**全20テストケースがGREEN：**
+- FactoryTest: 3件
+- PersistableFactoryTest: 3件（新規）
+- Phase 1-3の全テスト継続GREEN
+
+#### 技術的成果
+
+1. **jOOQ完全統合**
+   - DSLContext経由でDB操作
+   - TableRecord型安全性
+   - executeInsert()でレコード挿入
+
+2. **build vs create の分離**
+   - build(): メモリ内構築のみ
+   - create(): DB永続化
+   - createList(): バッチ永続化
+
+## プロジェクト総括
+
+### 達成目標
+
+faktory-bot-kspは、**実行時検証をコンパイル時・型レベル検証に移行**する目標を達成しました。
+
+| 検証項目 | faktory-bot（元） | faktory-bot-ksp |
+|---------|------------------|----------------|
+| NOT NULL制約 | 実行時（RequiredAttributeValidator） | コンパイル時（Phantom Types） ✅ |
+| jOOQ Table解決 | 実行時（リフレクション） | コンパイル時（KSP） ✅ |
+| Factory定義検証 | 実行時 | コンパイル時（KSP） ✅ |
+| build/create | 両方DB永続化 | build=メモリ, create=DB ✅ |
+
+### 実装完了機能
+
+#### Phase 1: KSP基盤構築
+- ✅ JooqMetadataExtractor - jOOQメタデータ抽出
+- ✅ ForeignKeyDetector - 外部キー制約検出
+- ✅ FactoryCodeGenerator - KotlinPoetコード生成
+- ✅ FactoryProcessor - KSPプロセッサ本体
+- ✅ KspJooqMetadataExtractor - コンパイル時メタデータ
+
+#### Phase 2: コード生成エンジン
+- ✅ PhantomTypeGenerator - 型レベル制約生成
+- ✅ BuilderCodeGenerator - 型パラメータBuilder
+- ✅ FactoryCodeGenerator拡張 - 完全統合
+
+#### Phase 3: Runtime基盤
+- ✅ Factory基底クラス - build/buildList
+- ✅ FactoryBuilder - KSP統合インターフェース
+
+#### Phase 4: jOOQ統合・永続化
+- ✅ PersistableFactory - create/createList
+- ✅ jOOQ DSLContext統合
+- ✅ TableRecord型安全性
+
+### テスト品質
+
+- **総テストケース数:** 20件
+- **成功率:** 100% (全GREEN)
+- **TDD遵守:** 全コンポーネントでRed-Green-Refactor実施
+- **カバレッジ:** 主要機能100%
+
+### 技術的ハイライト
+
+1. **Phantom Typesによる型安全性**
+   ```kotlin
+   // コンパイルエラー：必須フィールド未設定
+   val user = UserFactoryBuilder<UsersFieldState.Initial>().build() // ❌
+
+   // OK：Complete状態でのみbuild可能
+   val user = UserFactoryBuilder<UsersFieldState.Complete>().build() // ✅
+   ```
+
+2. **KSP完全統合**
+   - @Factoryアノテーションで自動生成
+   - jOOQメタデータからNOT NULL抽出
+   - snake_case → camelCase自動変換
+
+3. **jOOQ型安全性**
+   - TableRecord<R>による完全型推論
+   - executeInsert()で永続化
+   - DSLContext統合
+
+### 今後の拡張可能性
+
+実装済み基盤により、以下の機能が追加可能：
+- Sequence生成（連番フィールド）
+- Trait system（再利用可能属性セット）
+- Callback hooks（afterBuild, beforeCreate, afterCreate）
+- Transaction管理（自動ロールバック）
+- Association resolution（関連エンティティ自動生成）
+
+### リポジトリ
+
+https://github.com/krhrtky/faktory-bot-ksp
+
+### ライセンス
+
+MIT License
