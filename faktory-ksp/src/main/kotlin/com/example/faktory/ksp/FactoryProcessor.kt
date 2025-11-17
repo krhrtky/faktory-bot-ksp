@@ -36,7 +36,7 @@ class FactoryProcessor(
         val builderName = "${baseName}FactoryBuilder"
         val recordClassName = "${baseName}Record"
 
-        val generatedCode = FactoryCodeGenerator.generate(
+        val generatedCode = FactoryCodeGenerator.generateComplete(
             tableName = metadata.tableName,
             recordClassName = recordClassName,
             metadata = metadata,
