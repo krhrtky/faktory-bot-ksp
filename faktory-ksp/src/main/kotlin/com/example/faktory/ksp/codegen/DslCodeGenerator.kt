@@ -22,7 +22,7 @@ object DslCodeGenerator {
         val builderClassName = "${baseName}DslBuilder"
         val factoryFunctionName = metadata.tableName.removeSuffix("s")
 
-        val file = FileSpec.builder("", "Generated")
+        val fileBuilder = FileSpec.builder("", "Generated")
             .addType(generateDslBuilder(builderClassName, recordClassName, metadata))
             .addFunction(
                 generateFactoryFunction(
@@ -32,7 +32,14 @@ object DslCodeGenerator {
                     metadata,
                 ),
             )
-            .build()
+
+        // 外部キーがある場合、associate extension関数を生成
+        metadata.foreignKeys.forEach { fk ->
+            val extension = AssociateCodeGenerator.generateAssociateExtension(fk)
+            fileBuilder.addFunction(extension)
+        }
+
+        val file = fileBuilder.build()
 
         return file.toString()
     }

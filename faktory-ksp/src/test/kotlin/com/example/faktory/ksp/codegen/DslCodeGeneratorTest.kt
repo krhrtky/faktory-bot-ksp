@@ -147,4 +147,28 @@ class DslCodeGeneratorTest {
         assertThat(code).contains("fun associate(")
         assertThat(code).contains("AssociationContext")
     }
+
+    @Test
+    fun `generate() creates associate extension functions for foreign keys`() {
+        val metadata =
+            TableMetadata(
+                tableName = "posts",
+                requiredFields = listOf("user_id", "title", "content"),
+                optionalFields = listOf("published"),
+                foreignKeys = listOf(
+                    ForeignKeyConstraint(
+                        fieldName = "user_id",
+                        referencedTable = "users",
+                        referencedRecordType = "UsersRecord",
+                    ),
+                ),
+            )
+
+        val code = DslCodeGenerator.generate("PostsRecord", metadata)
+
+        // Extension関数が生成される
+        assertThat(code).contains("fun AssociationContext.user(")
+        assertThat(code).contains("block: () -> UsersRecord")
+        assertThat(code).contains("associateWithPersist(\"user_id\", block)")
+    }
 }
