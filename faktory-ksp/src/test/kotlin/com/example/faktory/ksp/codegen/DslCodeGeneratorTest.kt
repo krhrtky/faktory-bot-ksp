@@ -108,6 +108,7 @@ class DslCodeGeneratorTest {
                     ForeignKeyConstraint(
                         fieldName = "user_id",
                         referencedTable = "users",
+                        referencedRecordType = "UsersRecord",
                     ),
                 ),
             )
@@ -135,6 +136,7 @@ class DslCodeGeneratorTest {
                     ForeignKeyConstraint(
                         fieldName = "user_id",
                         referencedTable = "users",
+                        referencedRecordType = "UsersRecord",
                     ),
                 ),
             )

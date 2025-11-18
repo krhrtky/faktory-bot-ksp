@@ -14,6 +14,7 @@ class ForeignKeyDetectorTest {
         assertThat(foreignKeys).hasSize(1)
         assertThat(foreignKeys[0].fieldName).isEqualTo("user_id")
         assertThat(foreignKeys[0].referencedTable).isEqualTo("users")
+        assertThat(foreignKeys[0].referencedRecordType).isEqualTo("UsersRecord")
     }
 
     @Test
