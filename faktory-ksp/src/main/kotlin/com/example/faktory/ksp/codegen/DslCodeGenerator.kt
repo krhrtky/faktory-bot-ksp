@@ -88,13 +88,42 @@ object DslCodeGenerator {
                 .build()
         }
 
-        val properties = requiredProperties + optionalProperties + fkProperties
+        // 外部キーがある場合、AssociationContextプロパティを追加
+        val additionalProperties = if (metadata.foreignKeys.isNotEmpty()) {
+            listOf(
+                PropertySpec.builder(
+                    "associationContext",
+                    ClassName("com.example.faktory.core", "AssociationContext"),
+                ).initializer("%T()", ClassName("com.example.faktory.core", "AssociationContext"))
+                    .build(),
+            )
+        } else {
+            emptyList()
+        }
+
+        val properties = requiredProperties + optionalProperties + fkProperties + additionalProperties
 
         val buildFunction = FunSpec.builder("build")
             .addModifiers(KModifier.INTERNAL)
             .returns(ClassName("", recordClassName))
             .addStatement("return %T()", ClassName("", recordClassName))
             .build()
+
+        // 外部キーがある場合のみassociateメソッドを生成
+        val functions = mutableListOf(buildFunction)
+        if (metadata.foreignKeys.isNotEmpty()) {
+            val associateMethod = FunSpec.builder("associate")
+                .addParameter(
+                    "block",
+                    LambdaTypeName.get(
+                        receiver = ClassName("com.example.faktory.core", "AssociationContext"),
+                        returnType = UNIT,
+                    ),
+                )
+                .addStatement("associationContext.block()")
+                .build()
+            functions.add(associateMethod)
+        }
 
         return TypeSpec.classBuilder(builderClassName)
             .addAnnotation(factoryDslAnnotation)
@@ -104,7 +133,7 @@ object DslCodeGenerator {
                     .build(),
             )
             .addProperties(properties)
-            .addFunction(buildFunction)
+            .addFunctions(functions)
             .build()
     }
 

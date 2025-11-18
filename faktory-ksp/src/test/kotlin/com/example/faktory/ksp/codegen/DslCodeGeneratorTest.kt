@@ -123,4 +123,26 @@ class DslCodeGeneratorTest {
         // user_idはオプショナルプロパティとして定義される
         assertThat(code).contains("var userId: Int? = null")
     }
+
+    @Test
+    fun `generate() creates associate method for foreign keys`() {
+        val metadata =
+            TableMetadata(
+                tableName = "posts",
+                requiredFields = listOf("user_id", "title", "content"),
+                optionalFields = listOf("published"),
+                foreignKeys = listOf(
+                    ForeignKeyConstraint(
+                        fieldName = "user_id",
+                        referencedTable = "users",
+                    ),
+                ),
+            )
+
+        val code = DslCodeGenerator.generate("PostsRecord", metadata)
+
+        // associateメソッドが生成される
+        assertThat(code).contains("fun associate(")
+        assertThat(code).contains("AssociationContext")
+    }
 }
