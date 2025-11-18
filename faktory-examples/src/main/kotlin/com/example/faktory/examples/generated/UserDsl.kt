@@ -2,6 +2,7 @@ package com.example.faktory.examples.generated
 
 import com.example.faktory.core.FactoryDsl
 import com.example.faktory.examples.jooq.tables.records.UsersRecord
+import java.time.LocalDateTime
 
 @FactoryDsl
 class UsersDslBuilder(
@@ -9,7 +10,7 @@ class UsersDslBuilder(
     var email: String,
 ) {
     var age: Int? = null
-    var createdAt: java.sql.Timestamp? = null
+    var createdAt: LocalDateTime? = null
 
     internal fun build(): UsersRecord =
         UsersRecord().apply {

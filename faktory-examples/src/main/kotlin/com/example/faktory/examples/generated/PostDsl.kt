@@ -2,6 +2,7 @@ package com.example.faktory.examples.generated
 
 import com.example.faktory.core.FactoryDsl
 import com.example.faktory.examples.jooq.tables.records.PostsRecord
+import java.time.LocalDateTime
 
 @FactoryDsl
 class PostsDslBuilder(
@@ -10,7 +11,7 @@ class PostsDslBuilder(
     var content: String,
 ) {
     var published: Boolean? = null
-    var createdAt: java.sql.Timestamp? = null
+    var createdAt: LocalDateTime? = null
 
     internal fun build(): PostsRecord =
         PostsRecord().apply {

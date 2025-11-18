@@ -61,6 +61,88 @@ val post = post(
 3. **@DslMarkerによるスコープ制御**
    - 入れ子構造の誤用を防止
 
+## テスト例
+
+### UserDslTest
+
+```kotlin
+@Test
+fun `user() 必須フィールドのみでUserRecordを構築`() {
+    val userRecord = user(name = "Alice", email = "alice@example.com")
+
+    assertThat(userRecord.name).isEqualTo("Alice")
+    assertThat(userRecord.email).isEqualTo("alice@example.com")
+}
+
+@Test
+fun `user() DSLブロックでオプショナルフィールドを設定`() {
+    val userRecord = user(name = "Bob", email = "bob@example.com") {
+        age = 30
+    }
+
+    assertThat(userRecord.age).isEqualTo(30)
+}
+```
+
+### PostDslTest
+
+```kotlin
+@Test
+fun `post() 必須フィールドのみでPostRecordを構築`() {
+    val postRecord = post(
+        userId = 1,
+        title = "My First Post",
+        content = "Hello, World!",
+    )
+
+    assertThat(postRecord.title).isEqualTo("My First Post")
+}
+
+@Test
+fun `post() 関連するUserと一緒にDBに永続化`() {
+    val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+    val userRecord = user(name = "Alice", email = "alice@example.com")
+    dsl.executeInsert(userRecord)
+
+    val userId = dsl.selectFrom(USERS).fetchOne()!!.id!!
+
+    val postRecord = post(
+        userId = userId,
+        title = "Alice's Post",
+        content = "Content by Alice",
+    ) {
+        published = true
+    }
+    dsl.executeInsert(postRecord)
+}
+```
+
+## テスト実行について
+
+統合テストを実行するにはDockerが必要です。
+
+### Colima使用時
+
+```bash
+# Colimaが起動していることを確認
+colima status
+
+# 起動していない場合は起動
+colima start
+
+# テスト実行
+./gradlew :faktory-examples:test
+```
+
+### Docker Desktop使用時
+
+Docker Desktopが起動していることを確認してからテストを実行してください。
+
+```bash
+./gradlew :faktory-examples:test
+```
+
 ## 将来の改善
 
 - 型情報の正確な抽出（Int, Boolean, Timestamp等）

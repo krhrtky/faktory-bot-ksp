@@ -669,6 +669,144 @@ faktory-bot-kspは、**実行時検証をコンパイル時・型レベル検証
 - Transaction管理（自動ロールバック）
 - Association resolution（関連エンティティ自動生成）
 
+## DSL実装（Phase 5）
+
+**実装日:** 2025-11-18
+
+### コンストラクタパラメータDSL
+
+Builder PatternからKotlinらしいDSLに変更しました。
+
+#### 設計方針
+
+**DSL_DESIGN.md**で3つのアプローチを評価：
+1. Simple DSL（実行時検証）
+2. **Constructor Parameter DSL（採用）** - コンパイル時検証
+3. Staged DSL（複雑な型レベル制約）
+
+**選定理由：**
+- 必須フィールドをコンストラクタパラメータで強制（コンパイル時検証）
+- オプショナルフィールドはDSLブロックで設定（簡潔な記述）
+- Kotlinの慣用句に沿った自然な記述
+
+#### 実装コンポーネント
+
+1. **@FactoryDsl annotation** ✅
+   - `@DslMarker`によるスコープ制御
+   - DSLビルダークラスに適用
+   - 実装: `faktory-runtime/src/main/kotlin/com/example/faktory/core/FactoryDsl.kt`
+   - テスト: 2件（GREEN）
+
+2. **DslCodeGenerator** ✅
+   - KotlinPoetでDSLコード生成
+   - 必須フィールド→コンストラクタパラメータ
+   - オプショナルフィールド→nullable プロパティ
+   - トップレベル関数生成（`user()`, `post()`）
+   - snake_case → camelCase変換
+   - 実装: `faktory-ksp/src/main/kotlin/com/example/faktory/ksp/codegen/DslCodeGenerator.kt`
+   - テスト: 6件（GREEN）
+
+3. **TableMetadata拡張** ✅
+   - `optionalFields`プロパティ追加
+   - jOOQのnullableフィールドを抽出
+   - 実装: `faktory-ksp/src/main/kotlin/com/example/faktory/ksp/metadata/JooqMetadataExtractor.kt`
+
+#### 生成されるDSLコード例
+
+**UserDsl.kt:**
+```kotlin
+@FactoryDsl
+class UsersDslBuilder(
+    var name: String,
+    var email: String,
+) {
+    var age: Int? = null
+    var createdAt: LocalDateTime? = null
+
+    internal fun build(): UsersRecord =
+        UsersRecord().apply {
+            this.name = this@UsersDslBuilder.name
+            this.email = this@UsersDslBuilder.email
+            this.age = this@UsersDslBuilder.age
+            this.createdAt = this@UsersDslBuilder.createdAt
+        }
+}
+
+fun user(
+    name: String,
+    email: String,
+    block: UsersDslBuilder.() -> Unit = {},
+): UsersRecord = UsersDslBuilder(name, email).apply(block).build()
+```
+
+#### 使用例
+
+```kotlin
+// 必須フィールドのみ（コンパイル時検証）
+val user = user(name = "Alice", email = "alice@example.com")
+
+// オプショナルフィールド追加
+val user = user(name = "Bob", email = "bob@example.com") {
+    age = 30
+}
+
+// 関連エンティティの永続化
+val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+val userRecord = user(name = "Charlie", email = "charlie@example.com")
+dsl.executeInsert(userRecord)
+
+val userId = dsl.selectFrom(USERS).fetchOne()!!.id!!
+val postRecord = post(
+    userId = userId,
+    title = "Charlie's Post",
+    content = "Content",
+) {
+    published = true
+}
+dsl.executeInsert(postRecord)
+```
+
+#### テスト実装
+
+**UserDslTest.kt:**
+- 5テストケース実装
+- Testcontainers統合テスト
+- メモリ内構築とDB永続化の両方をカバー
+- `faktory-examples/src/test/kotlin/.../generated/UserDslTest.kt`
+
+**PostDslTest.kt:**
+- 5テストケース実装
+- 外部キー制約テスト
+- 複数レコード永続化テスト
+- `faktory-examples/src/test/kotlin/.../generated/PostDslTest.kt`
+
+#### 技術的成果
+
+1. **コンパイル時型安全性**
+   ```kotlin
+   // コンパイルエラー：必須フィールド不足
+   val user = user(name = "Alice")  // ❌ email required
+
+   // OK：全必須フィールドを指定
+   val user = user(name = "Alice", email = "alice@example.com")  // ✅
+   ```
+
+2. **jOOQ型マッピング**
+   - `LocalDateTime`でTimestamp型を正しく処理
+   - 型安全なRecordビルディング
+
+3. **TDD実施**
+   - DslCodeGeneratorTest: 6件（全GREEN）
+   - FactoryDslTest: 2件（全GREEN）
+   - UserDslTest: 5件（2件GREEN、3件Docker要因で保留）
+   - PostDslTest: 5件（3件GREEN、2件Docker要因で保留）
+
+#### ドキュメント更新
+
+- `faktory-examples/src/main/kotlin/.../generated/README.md`にテスト例を追加
+- Docker/Colima環境のセットアップ手順を記載
+- 統合テスト実行ガイドを追加
+
 ### リポジトリ
 
 https://github.com/krhrtky/faktory-bot-ksp
