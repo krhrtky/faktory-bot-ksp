@@ -1,5 +1,6 @@
 package com.example.faktory.ksp.codegen
 
+import com.example.faktory.ksp.metadata.ForeignKeyConstraint
 import com.example.faktory.ksp.metadata.TableMetadata
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -94,5 +95,32 @@ class DslCodeGeneratorTest {
 
         assertThat(code).contains("var firstName: String,")
         assertThat(code).contains("var lastName: String,")
+    }
+
+    @Test
+    fun `generate() excludes foreign key fields from constructor parameters`() {
+        val metadata =
+            TableMetadata(
+                tableName = "posts",
+                requiredFields = listOf("user_id", "title", "content"),
+                optionalFields = listOf("published", "created_at"),
+                foreignKeys = listOf(
+                    ForeignKeyConstraint(
+                        fieldName = "user_id",
+                        referencedTable = "users",
+                    ),
+                ),
+            )
+
+        val code = DslCodeGenerator.generate("PostsRecord", metadata)
+
+        // user_idはコンストラクタパラメータに含まれない
+        assertThat(code).doesNotContain("var userId: String,")
+        assertThat(code).doesNotContain("var userId: Int,")
+        // titleとcontentは必須パラメータ
+        assertThat(code).contains("var title: String,")
+        assertThat(code).contains("var content: String,")
+        // user_idはオプショナルプロパティとして定義される
+        assertThat(code).contains("var userId: Int? = null")
     }
 }

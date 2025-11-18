@@ -6,6 +6,7 @@ data class TableMetadata(
     val tableName: String,
     val requiredFields: List<String> = emptyList(),
     val optionalFields: List<String> = emptyList(),
+    val foreignKeys: List<ForeignKeyConstraint> = emptyList(),
 )
 
 object JooqMetadataExtractor {

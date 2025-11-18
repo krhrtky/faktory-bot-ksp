@@ -46,14 +46,18 @@ object DslCodeGenerator {
             ClassName("com.example.faktory.core", "FactoryDsl"),
         ).build()
 
-        val constructorParams = metadata.requiredFields.map { fieldName ->
+        // 外部キーフィールドを除外
+        val fkFieldNames = metadata.foreignKeys.map { it.fieldName }
+        val nonFkRequiredFields = metadata.requiredFields.filterNot { it in fkFieldNames }
+
+        val constructorParams = nonFkRequiredFields.map { fieldName ->
             ParameterSpec.builder(
                 fieldName.toCamelCase(),
                 String::class,
             ).build()
         }
 
-        val requiredProperties = metadata.requiredFields.map { fieldName ->
+        val requiredProperties = nonFkRequiredFields.map { fieldName ->
             PropertySpec.builder(
                 fieldName.toCamelCase(),
                 String::class,
@@ -73,7 +77,18 @@ object DslCodeGenerator {
                 .build()
         }
 
-        val properties = requiredProperties + optionalProperties
+        // 外部キーフィールドをオプショナルプロパティとして追加
+        val fkProperties = metadata.foreignKeys.map { fk ->
+            PropertySpec.builder(
+                fk.fieldName.toCamelCase(),
+                Int::class.asClassName().copy(nullable = true),
+                KModifier.PUBLIC,
+            ).mutable(true)
+                .initializer("null")
+                .build()
+        }
+
+        val properties = requiredProperties + optionalProperties + fkProperties
 
         val buildFunction = FunSpec.builder("build")
             .addModifiers(KModifier.INTERNAL)
@@ -99,7 +114,11 @@ object DslCodeGenerator {
         recordClassName: String,
         metadata: TableMetadata,
     ): FunSpec {
-        val requiredParams = metadata.requiredFields.map { fieldName ->
+        // 外部キーフィールドを除外
+        val fkFieldNames = metadata.foreignKeys.map { it.fieldName }
+        val nonFkRequiredFields = metadata.requiredFields.filterNot { it in fkFieldNames }
+
+        val requiredParams = nonFkRequiredFields.map { fieldName ->
             ParameterSpec.builder(
                 fieldName.toCamelCase(),
                 String::class,
@@ -120,7 +139,7 @@ object DslCodeGenerator {
             .addParameter(blockParam)
             .returns(ClassName("", recordClassName))
             .addStatement(
-                "return %T(${metadata.requiredFields.joinToString(", ") { it.toCamelCase() }}).apply(block).build()",
+                "return %T(${nonFkRequiredFields.joinToString(", ") { it.toCamelCase() }}).apply(block).build()",
                 ClassName("", builderClassName),
             )
             .build()
