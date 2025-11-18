@@ -227,16 +227,44 @@ DslCodeGeneratorTest (拡張分)
 - **GREEN:** AssociateCodeGenerator実装 - generateAssociateExtension
 - **REFACTOR:** なし
 
-#### 生成コード例
+**Cycle 3.3: DslCodeGeneratorとAssociateCodeGeneratorの統合**
+- **RED:** DslCodeGeneratorTestにextension関数生成テスト追加
+- **GREEN:** DslCodeGenerator.generate()でAssociateCodeGeneratorを呼び出し
+- **REFACTOR:** なし
+
+#### 生成コード例 (完全版)
 
 ```kotlin
-// ForeignKeyConstraintから自動生成
-fun AssociationContext.user(block: () -> UsersRecord) {
-    associateWithPersist("user_id", block)
+// DslCodeGenerator.generate()で生成される完全なコード
+
+// Builder class
+@FactoryDsl
+class PostsDslBuilder(
+    var title: String,
+    var content: String,
+) {
+    var userId: Int? = null
+    var published: Boolean? = null
+
+    private val associationContext = AssociationContext()
+
+    fun associate(block: AssociationContext.() -> Unit) {
+        associationContext.block()
+    }
+
+    internal fun build(): PostsRecord = PostsRecord()
 }
 
-fun AssociationContext.blogPost(block: () -> BlogPostsRecord) {
-    associateWithPersist("blog_post_id", block)
+// Factory function
+fun post(
+    title: String,
+    content: String,
+    block: PostsDslBuilder.() -> Unit = {}
+): PostsRecord = PostsDslBuilder(title, content).apply(block).build()
+
+// Associate extension function (NEW in Phase 3.3)
+fun AssociationContext.user(block: () -> UsersRecord) {
+    associateWithPersist("user_id", block)
 }
 ```
 
@@ -250,7 +278,10 @@ AssociateCodeGeneratorTest (新規)
 ✅ generateAssociateExtension() creates extension function for foreign key
 ✅ generateAssociateExtension() handles snake_case table names
 
-新規テスト: 2件（全GREEN）
+DslCodeGeneratorTest (拡張分)
+✅ generate() creates associate extension functions for foreign keys
+
+Phase 3総テスト数: 4件（全GREEN）
 ```
 
 #### コミット
@@ -262,6 +293,10 @@ AssociateCodeGeneratorTest (新規)
 2. Phase 3.2.1
    - コミットハッシュ: `694b856`
    - メッセージ: "feat: Implement AssociateCodeGenerator for extension functions (Phase 3.2.1)"
+
+3. Phase 3.3
+   - コミットハッシュ: `69298e6`
+   - メッセージ: "feat: Integrate AssociateCodeGenerator into DslCodeGenerator (Phase 3.3)"
 
 ---
 
@@ -300,9 +335,9 @@ dsl.executeInsert(postRecord)
 
 - **Phase 1:** 100%（全4テストケース）
 - **Phase 2:** 100%（全2テストケース追加、既存6件維持）
-- **Phase 3:** 100%（全3テストケース、うち2件新規）
+- **Phase 3:** 100%（全4テストケース、うち3件新規）
 
-**総テスト数:** 15件（全GREEN）
+**総テスト数:** 16件（全GREEN）
 
 ### TDD遵守度
 
@@ -314,10 +349,10 @@ dsl.executeInsert(postRecord)
 
 - **Phase 1:** 1コミット
 - **Phase 2:** 2コミット
-- **Phase 3:** 2コミット
-- **総コミット数:** 6件（計画3件 + 進捗レポート1件 + Phase 3の2件）
+- **Phase 3:** 3コミット（3.1, 3.2, 3.3）
+- **総コミット数:** 8件（計画3件 + 進捗レポート2件 + Phase実装3件）
 - **コミットメッセージ:** 全てTDD原則の遵守状況を記載
-- **リモート同期:** Phase 1-2完了、Phase 3未プッシュ
+- **リモート同期:** 全完了
 
 ---
 
@@ -340,11 +375,14 @@ dsl.executeInsert(postRecord)
 ### 完了フェーズ
 - ✅ **Phase 1:** AssociationContext (Runtime基盤) - 4 Cycles
 - ✅ **Phase 2:** DslBuilder拡張 - 2 Cycles
-- ✅ **Phase 3:** KSP統合 - 2 Cycles
+- ✅ **Phase 3:** KSP統合 - 3 Cycles
+  - Phase 3.1: ForeignKeyConstraint拡張
+  - Phase 3.2: AssociateCodeGenerator実装
+  - Phase 3.3: DslCodeGeneratorとの統合
 
 ### 成果
-- ✅ TDD原則を100%遵守（全8 Cycles）
-- ✅ 全テストケースGREEN（計15件）
+- ✅ TDD原則を100%遵守（全9 Cycles）
+- ✅ 全テストケースGREEN（計16件）
 - ✅ 最小実装で無駄なコードなし
 - ✅ 型安全なコード生成
 
@@ -353,5 +391,23 @@ dsl.executeInsert(postRecord)
 2. **外部キーのオプショナル化** (DslCodeGenerator)
 3. **Associate DSLブロック生成** (DslCodeGenerator)
 4. **Extension関数生成** (AssociateCodeGenerator)
+5. **完全なDSLコード生成** (DslCodeGenerator + AssociateCodeGenerator統合)
 
-**Phase 4（統合テスト）の実装により、完全なassociate機能が実現されます。**
+### 使用可能な機能
+
+生成されるコードにより、以下のような記述が可能になります：
+
+```kotlin
+// 外部キーを省略してPostを作成
+val postRecord = post(
+    title = "My Post",
+    content = "Content",
+) {
+    // associate blockで関連エンティティを指定
+    associate {
+        user { user(name = "Alice", email = "alice@example.com") }
+    }
+}
+```
+
+**Phase 4（End-to-End統合テスト）は、実際のKSP Processorとの統合時に実装予定です。**
