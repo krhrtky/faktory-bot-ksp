@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":faktory-runtime"))
+    testImplementation(project(":faktory-ksp"))
 
     implementation("org.jooq:jooq:3.18.7")
     implementation("org.jooq:jooq-kotlin:3.18.7")
