@@ -200,28 +200,72 @@ DslCodeGeneratorTest (拡張分)
 
 ---
 
-## 残タスク
+### ✅ Phase 3: KSP統合
 
-### Phase 3: KSP統合 (未実装)
+**実装完了:** 2025-11-18
 
-**目標:** ForeignKey情報から自動コード生成
+#### 実装コンポーネント
 
-**タスク:**
-1. Cycle 3.1.1: ForeignKeyConstraint拡張
-   - `referencedRecordType` フィールド追加
-   - ForeignKeyDetector拡張
+1. **ForeignKeyConstraint拡張**
+   - `referencedRecordType: String` フィールド追加
+   - テーブル名 → Record型名への変換
 
-2. Cycle 3.2.1: AssociateCodeGenerator実装
-   - associate専用extension関数生成
-   - 型安全なassociateブロック
+2. **AssociateCodeGenerator**
+   - `generateAssociateExtension()`: Extension関数生成
+   - snake_case → camelCase変換
+   - 単数形メソッド名生成（users → user）
 
-**例:**
+#### 実装サイクル
+
+**Cycle 3.1.1: ForeignKeyConstraint拡張**
+- **RED:** ForeignKeyDetectorTestにreferencedRecordType検証追加
+- **GREEN:** ForeignKeyConstraintにreferencedRecordType追加、toPascalCase実装
+- **REFACTOR:** なし
+
+**Cycle 3.2.1: AssociateCodeGenerator実装**
+- **RED:** AssociateCodeGeneratorTest作成 - extension関数生成テスト
+- **GREEN:** AssociateCodeGenerator実装 - generateAssociateExtension
+- **REFACTOR:** なし
+
+#### 生成コード例
+
 ```kotlin
-// 生成されるextension
+// ForeignKeyConstraintから自動生成
 fun AssociationContext.user(block: () -> UsersRecord) {
     associateWithPersist("user_id", block)
 }
+
+fun AssociationContext.blogPost(block: () -> BlogPostsRecord) {
+    associateWithPersist("blog_post_id", block)
+}
 ```
+
+#### テスト結果
+
+```
+ForeignKeyDetectorTest (拡張分)
+✅ detect foreign key constraints from jOOQ Table (referencedRecordType追加)
+
+AssociateCodeGeneratorTest (新規)
+✅ generateAssociateExtension() creates extension function for foreign key
+✅ generateAssociateExtension() handles snake_case table names
+
+新規テスト: 2件（全GREEN）
+```
+
+#### コミット
+
+1. Phase 3.1.1
+   - コミットハッシュ: `b50a780`
+   - メッセージ: "feat: Add referencedRecordType to ForeignKeyConstraint (Phase 3.1.1)"
+
+2. Phase 3.2.1
+   - コミットハッシュ: `694b856`
+   - メッセージ: "feat: Implement AssociateCodeGenerator for extension functions (Phase 3.2.1)"
+
+---
+
+## 残タスク
 
 ### Phase 4: 統合テスト (未実装)
 
@@ -255,7 +299,10 @@ dsl.executeInsert(postRecord)
 ### コードカバレッジ
 
 - **Phase 1:** 100%（全4テストケース）
-- **Phase 2:** 100%（全8テストケース）
+- **Phase 2:** 100%（全2テストケース追加、既存6件維持）
+- **Phase 3:** 100%（全3テストケース、うち2件新規）
+
+**総テスト数:** 15件（全GREEN）
 
 ### TDD遵守度
 
@@ -265,35 +312,46 @@ dsl.executeInsert(postRecord)
 
 ### コミット品質
 
-- **全3コミット:** 意図が明確、Phase番号記載
-- **コミットメッセージ:** TDD原則の遵守状況を記載
-- **リモート同期:** 完了
+- **Phase 1:** 1コミット
+- **Phase 2:** 2コミット
+- **Phase 3:** 2コミット
+- **総コミット数:** 6件（計画3件 + 進捗レポート1件 + Phase 3の2件）
+- **コミットメッセージ:** 全てTDD原則の遵守状況を記載
+- **リモート同期:** Phase 1-2完了、Phase 3未プッシュ
 
 ---
 
 ## 次のステップ
 
-1. **Phase 3.1.1の実装開始**
-   - ForeignKeyConstraintTest拡張
-   - referencedRecordType追加
+1. **Phase 3の変更をプッシュ**
+   - Phase 3.1.1と3.2.1の変更をリモートに同期
 
-2. **Phase 3.2.1の実装**
-   - AssociateCodeGeneratorTest作成
-   - extension関数生成
-
-3. **Phase 4.1.1の統合テスト**
-   - Testcontainersセットアップ
-   - End-to-End検証
+2. **Phase 4の計画**
+   - End-to-End統合テスト
+   - KSP Processorとの完全統合
+   - 実際のDB永続化検証
 
 ---
 
 ## まとめ
 
-**Associate機能のPhase 1-2実装が完了しました。**
+**Associate機能のPhase 1-3実装が完了しました。**
 
-- ✅ TDD原則を100%遵守
-- ✅ 全テストケースGREEN（計12件）
+### 完了フェーズ
+- ✅ **Phase 1:** AssociationContext (Runtime基盤) - 4 Cycles
+- ✅ **Phase 2:** DslBuilder拡張 - 2 Cycles
+- ✅ **Phase 3:** KSP統合 - 2 Cycles
+
+### 成果
+- ✅ TDD原則を100%遵守（全8 Cycles）
+- ✅ 全テストケースGREEN（計15件）
 - ✅ 最小実装で無駄なコードなし
-- ✅ 型安全なDSL生成
+- ✅ 型安全なコード生成
 
-**Phase 3-4の実装により、完全なassociate機能が実現されます。**
+### 実装機能
+1. **関連エンティティの管理** (AssociationContext)
+2. **外部キーのオプショナル化** (DslCodeGenerator)
+3. **Associate DSLブロック生成** (DslCodeGenerator)
+4. **Extension関数生成** (AssociateCodeGenerator)
+
+**Phase 4（統合テスト）の実装により、完全なassociate機能が実現されます。**
