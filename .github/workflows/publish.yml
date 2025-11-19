@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - 'claude/setup-cicd-pipeline-*'
   workflow_dispatch:
 
 jobs:
