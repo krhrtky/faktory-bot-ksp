@@ -232,6 +232,11 @@ DslCodeGeneratorTest (拡張分)
 - **GREEN:** DslCodeGenerator.generate()でAssociateCodeGeneratorを呼び出し
 - **REFACTOR:** なし
 
+**Cycle 3.4: 型安全性検証とExamples**
+- **RED:** TypeSafetyValidationTest作成 - コンパイル時型チェック検証
+- **GREEN:** PostDsl.ktをPhase 3実装に更新
+- **REFACTOR:** 包括的なexampleとドキュメント追加
+
 #### 生成コード例 (完全版)
 
 ```kotlin
@@ -281,7 +286,12 @@ AssociateCodeGeneratorTest (新規)
 DslCodeGeneratorTest (拡張分)
 ✅ generate() creates associate extension functions for foreign keys
 
-Phase 3総テスト数: 4件（全GREEN）
+TypeSafetyValidationTest (新規)
+✅ associate block enforces correct Record type at compile time
+✅ user extension function only accepts lambda returning UsersRecord
+✅ associate extension provides type-safe factory API
+
+Phase 3総テスト数: 7件（全GREEN）
 ```
 
 #### コミット
@@ -297,6 +307,10 @@ Phase 3総テスト数: 4件（全GREEN）
 3. Phase 3.3
    - コミットハッシュ: `69298e6`
    - メッセージ: "feat: Integrate AssociateCodeGenerator into DslCodeGenerator (Phase 3.3)"
+
+4. Phase 3.4
+   - コミットハッシュ: `b553fc0`
+   - メッセージ: "feat: Add type-safety validation examples for associate feature (Phase 3.4)"
 
 ---
 
@@ -335,9 +349,9 @@ dsl.executeInsert(postRecord)
 
 - **Phase 1:** 100%（全4テストケース）
 - **Phase 2:** 100%（全2テストケース追加、既存6件維持）
-- **Phase 3:** 100%（全4テストケース、うち3件新規）
+- **Phase 3:** 100%（全7テストケース、うち6件新規）
 
-**総テスト数:** 16件（全GREEN）
+**総テスト数:** 19件（全GREEN）
 
 ### TDD遵守度
 
@@ -349,10 +363,10 @@ dsl.executeInsert(postRecord)
 
 - **Phase 1:** 1コミット
 - **Phase 2:** 2コミット
-- **Phase 3:** 3コミット（3.1, 3.2, 3.3）
-- **総コミット数:** 8件（計画3件 + 進捗レポート2件 + Phase実装3件）
+- **Phase 3:** 4コミット（3.1, 3.2, 3.3, 3.4）
+- **総コミット数:** 9件（計画3件 + 進捗レポート3件 + Phase実装4件）
 - **コミットメッセージ:** 全てTDD原則の遵守状況を記載
-- **リモート同期:** 全完了
+- **リモート同期:** Phase 3.4未プッシュ
 
 ---
 
@@ -375,16 +389,18 @@ dsl.executeInsert(postRecord)
 ### 完了フェーズ
 - ✅ **Phase 1:** AssociationContext (Runtime基盤) - 4 Cycles
 - ✅ **Phase 2:** DslBuilder拡張 - 2 Cycles
-- ✅ **Phase 3:** KSP統合 - 3 Cycles
+- ✅ **Phase 3:** KSP統合 - 4 Cycles
   - Phase 3.1: ForeignKeyConstraint拡張
   - Phase 3.2: AssociateCodeGenerator実装
   - Phase 3.3: DslCodeGeneratorとの統合
+  - Phase 3.4: 型安全性検証とExamples
 
 ### 成果
-- ✅ TDD原則を100%遵守（全9 Cycles）
-- ✅ 全テストケースGREEN（計16件）
+- ✅ TDD原則を100%遵守（全10 Cycles）
+- ✅ 全テストケースGREEN（計19件）
 - ✅ 最小実装で無駄なコードなし
 - ✅ 型安全なコード生成
+- ✅ コンパイル時型チェック検証完了
 
 ### 実装機能
 1. **関連エンティティの管理** (AssociationContext)
@@ -392,6 +408,7 @@ dsl.executeInsert(postRecord)
 3. **Associate DSLブロック生成** (DslCodeGenerator)
 4. **Extension関数生成** (AssociateCodeGenerator)
 5. **完全なDSLコード生成** (DslCodeGenerator + AssociateCodeGenerator統合)
+6. **型安全性検証とExamples** (TypeSafetyValidationTest, TypeSafeAssociateExamples)
 
 ### 使用可能な機能
 
@@ -409,5 +426,43 @@ val postRecord = post(
     }
 }
 ```
+
+### 型レベルでの外部キー制約（Phase 3.4で検証）
+
+**Extension関数による型安全性：**
+
+```kotlin
+// Extension関数の定義（KSPで自動生成）
+fun AssociationContext.user(block: () -> UsersRecord)
+```
+
+**この型シグネチャにより、コンパイル時に以下が保証されます：**
+
+1. ✅ **正しい型のみ受け付ける**
+   ```kotlin
+   associate {
+       user { user(name = "Alice", email = "alice@example.com") } // ✅ OK
+   }
+   ```
+
+2. ❌ **間違った型はコンパイルエラー**
+   ```kotlin
+   associate {
+       user { post(title = "Wrong", content = "Type") } // ❌ Compile Error
+       user { "Not a record" }                          // ❌ Compile Error
+       user { null }                                    // ❌ Compile Error
+   }
+   ```
+
+3. 🎯 **IDE統合**
+   - 型エラーは開発中に即座に表示
+   - 補完機能が正しい型のみを提案
+   - リファクタリングも型安全
+
+**従来のfaktory-botとの違い：**
+- **元:** 実行時に型チェック → RuntimeException
+- **KSP版:** コンパイル時に型チェック → Compile Error
+
+詳細は `faktory-examples/src/main/kotlin/com/example/faktory/examples/validation/README.md` を参照。
 
 **Phase 4（End-to-End統合テスト）は、実際のKSP Processorとの統合時に実装予定です。**
