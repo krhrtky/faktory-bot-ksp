@@ -30,6 +30,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Check environment
+        run: |
+          echo "CI=$CI"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_ACTOR=$GITHUB_ACTOR"
+
       - name: Extract version from tag
         id: get_version
         run: |

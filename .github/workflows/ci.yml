@@ -25,6 +25,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Check Docker
+        run: |
+          docker --version
+          docker info
+
+      - name: Check environment
+        run: |
+          echo "CI=$CI"
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+
       - name: Run tests
         run: ./gradlew test --no-daemon --stacktrace
 
