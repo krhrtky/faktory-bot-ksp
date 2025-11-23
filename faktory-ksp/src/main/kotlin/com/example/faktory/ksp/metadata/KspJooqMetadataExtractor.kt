@@ -5,13 +5,17 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 
 object KspJooqMetadataExtractor {
-    fun extract(tableName: String, resolver: Resolver): TableMetadata {
+    fun extract(
+        tableName: String,
+        resolver: Resolver,
+    ): TableMetadata {
         val tableClassName = tableName.toCamelCase()
         val packageName = "com.example.faktory.examples.jooq.tables"
         val fullClassName = "$packageName.$tableClassName"
 
-        val tableClass = resolver.getClassDeclarationByName(resolver.getKSNameFromString(fullClassName))
-            ?: return TableMetadata(tableName = tableName, requiredFields = emptyList())
+        val tableClass =
+            resolver.getClassDeclarationByName(resolver.getKSNameFromString(fullClassName))
+                ?: return TableMetadata(tableName = tableName, requiredFields = emptyList())
 
         val requiredFields = extractRequiredFields(tableClass)
 
@@ -37,7 +41,10 @@ object KspJooqMetadataExtractor {
         return declaration.qualifiedName?.asString()?.startsWith("org.jooq.TableField") == true
     }
 
-    private fun isNotNullField(fieldName: String, tableClass: KSClassDeclaration): Boolean {
+    private fun isNotNullField(
+        fieldName: String,
+        tableClass: KSClassDeclaration,
+    ): Boolean {
         return true
     }
 

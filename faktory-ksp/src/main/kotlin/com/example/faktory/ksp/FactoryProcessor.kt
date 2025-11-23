@@ -8,7 +8,6 @@ import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSAnnotated
-import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 
 class FactoryProcessor(
@@ -26,7 +25,10 @@ class FactoryProcessor(
         return emptyList()
     }
 
-    private fun processFactory(classDeclaration: KSClassDeclaration, resolver: Resolver) {
+    private fun processFactory(
+        classDeclaration: KSClassDeclaration,
+        resolver: Resolver,
+    ) {
         val containingFile = classDeclaration.containingFile ?: return
 
         val tableName = extractTableName(classDeclaration) ?: return
@@ -36,12 +38,13 @@ class FactoryProcessor(
         val builderName = "${baseName}FactoryBuilder"
         val recordClassName = "${baseName}Record"
 
-        val generatedCode = FactoryCodeGenerator.generateComplete(
-            tableName = metadata.tableName,
-            recordClassName = recordClassName,
-            metadata = metadata,
-            foreignKeys = emptyList(),
-        )
+        val generatedCode =
+            FactoryCodeGenerator.generateComplete(
+                tableName = metadata.tableName,
+                recordClassName = recordClassName,
+                metadata = metadata,
+                foreignKeys = emptyList(),
+            )
 
         codeGenerator.createNewFile(
             dependencies = Dependencies(false, containingFile),
@@ -51,9 +54,10 @@ class FactoryProcessor(
     }
 
     private fun extractTableName(classDeclaration: KSClassDeclaration): String? {
-        val factoryAnnotation = classDeclaration.annotations
-            .firstOrNull { it.shortName.asString() == "Factory" }
-            ?: return null
+        val factoryAnnotation =
+            classDeclaration.annotations
+                .firstOrNull { it.shortName.asString() == "Factory" }
+                ?: return null
 
         return factoryAnnotation.arguments
             .firstOrNull { it.name?.asString() == "tableName" }

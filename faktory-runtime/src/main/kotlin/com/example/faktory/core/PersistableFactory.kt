@@ -8,6 +8,7 @@ abstract class PersistableFactory<R : TableRecord<R>, T : Any, B : FactoryBuilde
     protected val dsl: DSLContext,
 ) : Factory<T, B>() {
     abstract fun table(): Table<R>
+
     abstract fun toRecord(entity: T): R
 
     fun create(): T {
@@ -17,6 +18,5 @@ abstract class PersistableFactory<R : TableRecord<R>, T : Any, B : FactoryBuilde
         return entity
     }
 
-    fun createList(count: Int): List<T> =
-        (1..count).map { create() }
+    fun createList(count: Int): List<T> = (1..count).map { create() }
 }

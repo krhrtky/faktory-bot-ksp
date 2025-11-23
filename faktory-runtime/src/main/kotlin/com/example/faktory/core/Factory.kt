@@ -5,8 +5,7 @@ abstract class Factory<T : Any, B : FactoryBuilder<T>> {
 
     fun build(): T = builder().build()
 
-    fun buildList(count: Int): List<T> =
-        (1..count).map { build() }
+    fun buildList(count: Int): List<T> = (1..count).map { build() }
 }
 
 interface FactoryBuilder<T : Any> {

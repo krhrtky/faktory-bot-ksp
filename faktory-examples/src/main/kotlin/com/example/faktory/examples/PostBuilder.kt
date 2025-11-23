@@ -3,8 +3,9 @@ package com.example.faktory.examples
 import com.example.faktory.core.FactoryBuilder
 import java.util.concurrent.atomic.AtomicInteger
 
-class PostBuilder : FactoryBuilder<Post> {
-    private val sequence = AtomicInteger(0)
+class PostBuilder(
+    private val sequence: AtomicInteger = AtomicInteger(0),
+) : FactoryBuilder<Post> {
     private var userId: Int? = null
     private var title: String? = null
     private var content: String? = null
@@ -20,11 +21,12 @@ class PostBuilder : FactoryBuilder<Post> {
 
     fun withPublished(value: Boolean) = apply { this.published = value }
 
-    fun withSequence() = apply {
-        val seq = sequence.incrementAndGet()
-        this.title = "Post $seq"
-        this.content = "Content of post $seq"
-    }
+    fun withSequence() =
+        apply {
+            val seq = sequence.incrementAndGet()
+            this.title = "Post $seq"
+            this.content = "Content of post $seq"
+        }
 
     override fun build(): Post {
         val seq = sequence.get()

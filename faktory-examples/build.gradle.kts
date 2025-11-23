@@ -68,7 +68,13 @@ sourceSets {
 }
 
 tasks.test {
-    environment("DOCKER_HOST", "unix:///Users/takuya.kurihara/.colima/default/docker.sock")
-    environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/Users/takuya.kurihara/.colima/default/docker.sock")
-    environment("TESTCONTAINERS_RYUK_DISABLED", "true")
+    // Only apply local Docker settings when not in CI
+    if (System.getenv("CI") == null) {
+        val dockerSocket = "/Users/takuya.kurihara/.colima/default/docker.sock"
+        if (file(dockerSocket).exists()) {
+            environment("DOCKER_HOST", "unix://$dockerSocket")
+            environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", dockerSocket)
+            environment("TESTCONTAINERS_RYUK_DISABLED", "true")
+        }
+    }
 }

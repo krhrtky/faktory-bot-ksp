@@ -1,6 +1,5 @@
 package com.example.faktory.core
 
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
@@ -18,6 +17,7 @@ class PersistableFactoryTest {
         private var name: String = "Test User"
 
         fun withId(value: Int): UserBuilder = apply { id = value }
+
         fun withName(value: String): UserBuilder = apply { name = value }
 
         override fun build(): User = User(id, name)
@@ -28,7 +28,9 @@ class PersistableFactoryTest {
 
     class TestUserFactory(dsl: DSLContext) : PersistableFactory<TestRecord, User, UserBuilder>(dsl) {
         override fun builder(): UserBuilder = UserBuilder()
+
         override fun table(): Table<TestRecord> = mockk()
+
         override fun toRecord(entity: User): TestRecord = mockk()
     }
 

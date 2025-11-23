@@ -161,6 +161,75 @@ val requiredFields = tableClass.getAllProperties()
 
 All 20 test cases pass with 100% success rate.
 
+### Code Quality
+
+```bash
+# Run ktlint
+./gradlew ktlintCheck
+
+# Run detekt
+./gradlew detekt
+```
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment.
+
+### CI Workflow
+
+Runs on every push and pull request to `main`, `develop`, or `claude/**` branches:
+
+1. **Test**: Run all tests with JUnit
+2. **Lint**: Run ktlint for code style and detekt for static analysis
+3. **Build**: Build all modules and upload artifacts
+
+View CI status: [GitHub Actions](https://github.com/krhrtky/faktory-bot-ksp/actions)
+
+### Publishing to GitHub Packages
+
+To publish a new version:
+
+```bash
+# Tag the release
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The publish workflow will:
+1. Run tests
+2. Build artifacts
+3. Publish `faktory-ksp` and `faktory-runtime` to GitHub Packages
+4. Create a GitHub release with artifacts
+
+### Using Published Packages
+
+Add GitHub Packages repository to your `build.gradle.kts`:
+
+```kotlin
+repositories {
+    maven {
+        name = "GitHubPackages"
+        url = uri("https://maven.pkg.github.com/krhrtky/faktory-bot-ksp")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+            password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
+dependencies {
+    implementation("com.example.faktory:faktory-runtime:0.1.0")
+    ksp("com.example.faktory:faktory-ksp:0.1.0")
+}
+```
+
+Set your GitHub credentials in `~/.gradle/gradle.properties`:
+
+```properties
+gpr.user=YOUR_GITHUB_USERNAME
+gpr.token=YOUR_GITHUB_TOKEN
+```
+
 ## Repository
 
 https://github.com/krhrtky/faktory-bot-ksp
