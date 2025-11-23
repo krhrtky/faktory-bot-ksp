@@ -22,17 +22,18 @@ object DslCodeGenerator {
         val builderClassName = "${baseName}DslBuilder"
         val factoryFunctionName = metadata.tableName.removeSuffix("s")
 
-        val file = FileSpec.builder("", "Generated")
-            .addType(generateDslBuilder(builderClassName, recordClassName, metadata))
-            .addFunction(
-                generateFactoryFunction(
-                    factoryFunctionName,
-                    builderClassName,
-                    recordClassName,
-                    metadata,
-                ),
-            )
-            .build()
+        val file =
+            FileSpec.builder("", "Generated")
+                .addType(generateDslBuilder(builderClassName, recordClassName, metadata))
+                .addFunction(
+                    generateFactoryFunction(
+                        factoryFunctionName,
+                        builderClassName,
+                        recordClassName,
+                        metadata,
+                    ),
+                )
+                .build()
 
         return file.toString()
     }
@@ -42,44 +43,49 @@ object DslCodeGenerator {
         recordClassName: String,
         metadata: TableMetadata,
     ): TypeSpec {
-        val factoryDslAnnotation = AnnotationSpec.builder(
-            ClassName("com.example.faktory.core", "FactoryDsl"),
-        ).build()
-
-        val constructorParams = metadata.requiredFields.map { fieldName ->
-            ParameterSpec.builder(
-                fieldName.toCamelCase(),
-                String::class,
+        val factoryDslAnnotation =
+            AnnotationSpec.builder(
+                ClassName("com.example.faktory.core", "FactoryDsl"),
             ).build()
-        }
 
-        val requiredProperties = metadata.requiredFields.map { fieldName ->
-            PropertySpec.builder(
-                fieldName.toCamelCase(),
-                String::class,
-                KModifier.PUBLIC,
-            ).mutable(true)
-                .initializer(fieldName.toCamelCase())
-                .build()
-        }
+        val constructorParams =
+            metadata.requiredFields.map { fieldName ->
+                ParameterSpec.builder(
+                    fieldName.toCamelCase(),
+                    String::class,
+                ).build()
+            }
 
-        val optionalProperties = metadata.optionalFields.map { fieldName ->
-            PropertySpec.builder(
-                fieldName.toCamelCase(),
-                String::class.asClassName().copy(nullable = true),
-                KModifier.PUBLIC,
-            ).mutable(true)
-                .initializer("null")
-                .build()
-        }
+        val requiredProperties =
+            metadata.requiredFields.map { fieldName ->
+                PropertySpec.builder(
+                    fieldName.toCamelCase(),
+                    String::class,
+                    KModifier.PUBLIC,
+                ).mutable(true)
+                    .initializer(fieldName.toCamelCase())
+                    .build()
+            }
+
+        val optionalProperties =
+            metadata.optionalFields.map { fieldName ->
+                PropertySpec.builder(
+                    fieldName.toCamelCase(),
+                    String::class.asClassName().copy(nullable = true),
+                    KModifier.PUBLIC,
+                ).mutable(true)
+                    .initializer("null")
+                    .build()
+            }
 
         val properties = requiredProperties + optionalProperties
 
-        val buildFunction = FunSpec.builder("build")
-            .addModifiers(KModifier.INTERNAL)
-            .returns(ClassName("", recordClassName))
-            .addStatement("return %T()", ClassName("", recordClassName))
-            .build()
+        val buildFunction =
+            FunSpec.builder("build")
+                .addModifiers(KModifier.INTERNAL)
+                .returns(ClassName("", recordClassName))
+                .addStatement("return %T()", ClassName("", recordClassName))
+                .build()
 
         return TypeSpec.classBuilder(builderClassName)
             .addAnnotation(factoryDslAnnotation)
@@ -99,21 +105,23 @@ object DslCodeGenerator {
         recordClassName: String,
         metadata: TableMetadata,
     ): FunSpec {
-        val requiredParams = metadata.requiredFields.map { fieldName ->
-            ParameterSpec.builder(
-                fieldName.toCamelCase(),
-                String::class,
-            ).build()
-        }
+        val requiredParams =
+            metadata.requiredFields.map { fieldName ->
+                ParameterSpec.builder(
+                    fieldName.toCamelCase(),
+                    String::class,
+                ).build()
+            }
 
-        val blockParam = ParameterSpec.builder(
-            "block",
-            LambdaTypeName.get(
-                receiver = ClassName("", builderClassName),
-                returnType = UNIT,
-            ),
-        ).defaultValue("{}")
-            .build()
+        val blockParam =
+            ParameterSpec.builder(
+                "block",
+                LambdaTypeName.get(
+                    receiver = ClassName("", builderClassName),
+                    returnType = UNIT,
+                ),
+            ).defaultValue("{}")
+                .build()
 
         return FunSpec.builder(functionName)
             .addParameters(requiredParams)

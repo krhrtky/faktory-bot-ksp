@@ -12,22 +12,25 @@ object PhantomTypeGenerator {
         val baseName = recordClassName.removeSuffix("Record")
         val stateName = "${baseName}FieldState"
 
-        val sealedInterface = TypeSpec.interfaceBuilder(stateName).apply {
-            addModifiers(com.squareup.kotlinpoet.KModifier.SEALED)
+        val sealedInterface =
+            TypeSpec.interfaceBuilder(stateName).apply {
+                addModifiers(com.squareup.kotlinpoet.KModifier.SEALED)
 
-            metadata.requiredFields.forEach { fieldName ->
-                val objectName = "With${fieldName.toCamelCase()}"
-                val stateObject = TypeSpec.objectBuilder(objectName).apply {
-                    addSuperinterface(ClassName("", stateName))
-                }.build()
-                addType(stateObject)
-            }
+                metadata.requiredFields.forEach { fieldName ->
+                    val objectName = "With${fieldName.toCamelCase()}"
+                    val stateObject =
+                        TypeSpec.objectBuilder(objectName).apply {
+                            addSuperinterface(ClassName("", stateName))
+                        }.build()
+                    addType(stateObject)
+                }
 
-            val completeObject = TypeSpec.objectBuilder("Complete").apply {
-                addSuperinterface(ClassName("", stateName))
+                val completeObject =
+                    TypeSpec.objectBuilder("Complete").apply {
+                        addSuperinterface(ClassName("", stateName))
+                    }.build()
+                addType(completeObject)
             }.build()
-            addType(completeObject)
-        }.build()
 
         return sealedInterface.toString()
     }

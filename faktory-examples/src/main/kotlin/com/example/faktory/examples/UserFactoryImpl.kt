@@ -8,13 +8,15 @@ import org.jooq.DSLContext
 class UserFactoryImpl(
     dsl: DSLContext,
 ) : PersistableFactory<UsersRecord, User, UserBuilder>(dsl) {
-    override fun builder() = UserBuilder()
+    private val sequence = java.util.concurrent.atomic.AtomicInteger(0)
+
+    override fun builder() = UserBuilder(sequence)
 
     override fun table() = USERS
 
     override fun toRecord(entity: User): UsersRecord =
         UsersRecord().apply {
-            id = entity.id
+            entity.id?.let { id = it }
             name = entity.name
             email = entity.email
             age = entity.age

@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm")
+    `maven-publish`
 }
 
 dependencies {
@@ -15,4 +16,50 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("com.github.tschuchortdev:kotlin-compile-testing-ksp:1.5.0")
     testImplementation("org.jooq:jooq-codegen:3.18.7")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+            artifactId = "faktory-ksp"
+
+            pom {
+                name.set("Faktory KSP")
+                description.set("KSP processor for faktory-bot-ksp - compile-time factory generation for jOOQ")
+                url.set("https://github.com/krhrtky/faktory-bot-ksp")
+
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+
+                developers {
+                    developer {
+                        id.set("krhrtky")
+                        name.set("krhrtky")
+                    }
+                }
+
+                scm {
+                    connection.set("scm:git:git://github.com/krhrtky/faktory-bot-ksp.git")
+                    developerConnection.set("scm:git:ssh://github.com/krhrtky/faktory-bot-ksp.git")
+                    url.set("https://github.com/krhrtky/faktory-bot-ksp")
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/krhrtky/faktory-bot-ksp")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
 }
