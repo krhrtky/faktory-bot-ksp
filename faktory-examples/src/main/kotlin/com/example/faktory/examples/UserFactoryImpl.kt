@@ -16,7 +16,7 @@ class UserFactoryImpl(
 
     override fun toRecord(entity: User): UsersRecord =
         UsersRecord().apply {
-            id = entity.id
+            entity.id?.let { id = it }
             name = entity.name
             email = entity.email
             age = entity.age

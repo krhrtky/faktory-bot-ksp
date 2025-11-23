@@ -16,7 +16,7 @@ class PostFactoryImpl(
 
     override fun toRecord(entity: Post): PostsRecord =
         PostsRecord().apply {
-            id = entity.id
+            entity.id?.let { id = it }
             userId = entity.userId
             title = entity.title
             content = entity.content
