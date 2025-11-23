@@ -132,4 +132,59 @@ class DslUsageTest {
         assertThat(posts.map { it.published })
             .containsExactly(false, true, false)
     }
+
+    @Test
+    fun `comment() DSLで必須フィールドのみ指定してCommentRecordを構築`() {
+        val commentRecord = comment(postId = 1, userId = 1, content = "Great post!")
+
+        assertThat(commentRecord.postId).isEqualTo(1)
+        assertThat(commentRecord.userId).isEqualTo(1)
+        assertThat(commentRecord.content).isEqualTo("Great post!")
+        assertThat(commentRecord.createdAt).isNull()
+    }
+
+    @Test
+    fun `comment() DSLブロックでオプショナルフィールドを設定`() {
+        val timestamp = LocalDateTime.now()
+        val commentRecord =
+            comment(postId = 1, userId = 2, content = "Nice!") {
+                createdAt = timestamp
+            }
+
+        assertThat(commentRecord.postId).isEqualTo(1)
+        assertThat(commentRecord.userId).isEqualTo(2)
+        assertThat(commentRecord.content).isEqualTo("Nice!")
+        assertThat(commentRecord.createdAt).isEqualTo(timestamp)
+    }
+
+    @Test
+    fun `複数のCommentRecordを生成できる`() {
+        val comments =
+            (1..5).map { index ->
+                comment(
+                    postId = 1,
+                    userId = index,
+                    content = "Comment $index from user $index",
+                )
+            }
+
+        assertThat(comments).hasSize(5)
+        assertThat(comments.map { it.content })
+            .containsExactly(
+                "Comment 1 from user 1",
+                "Comment 2 from user 2",
+                "Comment 3 from user 3",
+                "Comment 4 from user 4",
+                "Comment 5 from user 5",
+            )
+    }
+
+    @Test
+    fun `comment() DSLで複数外部キーを正しく設定`() {
+        val commentRecord = comment(postId = 10, userId = 20, content = "Multi-FK test")
+
+        assertThat(commentRecord.postId).isEqualTo(10)
+        assertThat(commentRecord.userId).isEqualTo(20)
+        assertThat(commentRecord.content).isEqualTo("Multi-FK test")
+    }
 }

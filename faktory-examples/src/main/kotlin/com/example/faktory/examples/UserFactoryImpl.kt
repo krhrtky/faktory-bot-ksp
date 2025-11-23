@@ -5,7 +5,7 @@ import com.example.faktory.examples.jooq.tables.Users.Companion.USERS
 import com.example.faktory.examples.jooq.tables.records.UsersRecord
 import org.jooq.DSLContext
 
-class UserFactoryImpl(
+open class UserFactoryImpl(
     dsl: DSLContext,
 ) : PersistableFactory<UsersRecord, User, UserBuilder>(dsl) {
     private val sequence = java.util.concurrent.atomic.AtomicInteger(0)
