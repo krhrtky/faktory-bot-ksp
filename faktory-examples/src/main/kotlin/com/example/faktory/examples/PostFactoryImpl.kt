@@ -8,7 +8,9 @@ import org.jooq.DSLContext
 class PostFactoryImpl(
     dsl: DSLContext,
 ) : PersistableFactory<PostsRecord, Post, PostBuilder>(dsl) {
-    override fun builder() = PostBuilder()
+    private val sequence = java.util.concurrent.atomic.AtomicInteger(0)
+
+    override fun builder() = PostBuilder(sequence)
 
     override fun table() = POSTS
 

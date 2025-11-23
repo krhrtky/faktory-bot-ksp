@@ -14,17 +14,18 @@ object FactoryCodeGenerator {
     ): String {
         val builderInterfaceName = "${recordClassName.removeSuffix("Record")}FactoryBuilder"
 
-        val builder = TypeSpec.interfaceBuilder(builderInterfaceName).apply {
-            metadata.requiredFields.forEach { fieldName ->
-                val methodName = "with${fieldName.toCamelCase()}"
-                addFunction(
-                    FunSpec.builder(methodName)
-                        .addParameter("value", String::class)
-                        .returns(com.squareup.kotlinpoet.ClassName("", builderInterfaceName))
-                        .build(),
-                )
-            }
-        }.build()
+        val builder =
+            TypeSpec.interfaceBuilder(builderInterfaceName).apply {
+                metadata.requiredFields.forEach { fieldName ->
+                    val methodName = "with${fieldName.toCamelCase()}"
+                    addFunction(
+                        FunSpec.builder(methodName)
+                            .addParameter("value", String::class)
+                            .returns(com.squareup.kotlinpoet.ClassName("", builderInterfaceName))
+                            .build(),
+                    )
+                }
+            }.build()
 
         return builder.toString()
     }
@@ -42,7 +43,7 @@ object FactoryCodeGenerator {
             $phantomTypes
 
             $builder
-        """.trimIndent()
+            """.trimIndent()
     }
 
     private fun String.toCamelCase(): String =

@@ -67,9 +67,10 @@ class UserDslTest {
 
     @Test
     fun `user() DSLブロックでオプショナルフィールドを設定`() {
-        val userRecord = user(name = "Bob", email = "bob@example.com") {
-            age = 30
-        }
+        val userRecord =
+            user(name = "Bob", email = "bob@example.com") {
+                age = 30
+            }
 
         assertThat(userRecord.name).isEqualTo("Bob")
         assertThat(userRecord.email).isEqualTo("bob@example.com")
@@ -79,9 +80,10 @@ class UserDslTest {
 
     @Test
     fun `user() DBに永続化してUserを作成`() {
-        val userRecord = user(name = "Charlie", email = "charlie@example.com") {
-            age = 25
-        }
+        val userRecord =
+            user(name = "Charlie", email = "charlie@example.com") {
+                age = 25
+            }
 
         val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
         dsl.executeInsert(userRecord)
@@ -98,11 +100,12 @@ class UserDslTest {
     fun `user() 複数のUserRecordを生成してDBに永続化`() {
         val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
 
-        val users = (1..3).map { index ->
-            user(name = "User $index", email = "user$index@example.com") {
-                age = 20 + index
+        val users =
+            (1..3).map { index ->
+                user(name = "User $index", email = "user$index@example.com") {
+                    age = 20 + index
+                }
             }
-        }
 
         users.forEach { userRecord ->
             dsl.executeInsert(userRecord)
@@ -120,10 +123,11 @@ class UserDslTest {
     @Test
     fun `user() タイムスタンプを明示的に設定`() {
         val timestamp = java.time.LocalDateTime.now()
-        val userRecord = user(name = "David", email = "david@example.com") {
-            age = 35
-            createdAt = timestamp
-        }
+        val userRecord =
+            user(name = "David", email = "david@example.com") {
+                age = 35
+                createdAt = timestamp
+            }
 
         assertThat(userRecord.name).isEqualTo("David")
         assertThat(userRecord.email).isEqualTo("david@example.com")

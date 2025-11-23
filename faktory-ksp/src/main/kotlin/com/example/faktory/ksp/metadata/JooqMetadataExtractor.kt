@@ -11,12 +11,14 @@ data class TableMetadata(
 object JooqMetadataExtractor {
     fun extract(table: Table<*>): TableMetadata {
         val allFields = table.fields().filter { it.name != "id" }
-        val requiredFields = allFields
-            .filter { field -> !field.dataType.nullable() }
-            .map { it.name }
-        val optionalFields = allFields
-            .filter { field -> field.dataType.nullable() }
-            .map { it.name }
+        val requiredFields =
+            allFields
+                .filter { field -> !field.dataType.nullable() }
+                .map { it.name }
+        val optionalFields =
+            allFields
+                .filter { field -> field.dataType.nullable() }
+                .map { it.name }
 
         return TableMetadata(
             tableName = table.name,

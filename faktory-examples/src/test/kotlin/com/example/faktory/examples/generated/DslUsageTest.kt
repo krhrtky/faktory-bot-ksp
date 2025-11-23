@@ -17,9 +17,10 @@ class DslUsageTest {
 
     @Test
     fun `user() DSLブロックでオプショナルフィールドを設定`() {
-        val userRecord = user(name = "Bob", email = "bob@example.com") {
-            age = 30
-        }
+        val userRecord =
+            user(name = "Bob", email = "bob@example.com") {
+                age = 30
+            }
 
         assertThat(userRecord.name).isEqualTo("Bob")
         assertThat(userRecord.email).isEqualTo("bob@example.com")
@@ -30,10 +31,11 @@ class DslUsageTest {
     @Test
     fun `user() DSLで全フィールドを設定`() {
         val timestamp = LocalDateTime.now()
-        val userRecord = user(name = "Charlie", email = "charlie@example.com") {
-            age = 25
-            createdAt = timestamp
-        }
+        val userRecord =
+            user(name = "Charlie", email = "charlie@example.com") {
+                age = 25
+                createdAt = timestamp
+            }
 
         assertThat(userRecord.name).isEqualTo("Charlie")
         assertThat(userRecord.email).isEqualTo("charlie@example.com")
@@ -43,11 +45,12 @@ class DslUsageTest {
 
     @Test
     fun `post() DSLで必須フィールドのみ指定してPostRecordを構築`() {
-        val postRecord = post(
-            userId = 1,
-            title = "My First Post",
-            content = "Hello, World!",
-        )
+        val postRecord =
+            post(
+                userId = 1,
+                title = "My First Post",
+                content = "Hello, World!",
+            )
 
         assertThat(postRecord.userId).isEqualTo(1)
         assertThat(postRecord.title).isEqualTo("My First Post")
@@ -58,13 +61,14 @@ class DslUsageTest {
 
     @Test
     fun `post() DSLブロックでオプショナルフィールドを設定`() {
-        val postRecord = post(
-            userId = 1,
-            title = "Published Post",
-            content = "This is published",
-        ) {
-            published = true
-        }
+        val postRecord =
+            post(
+                userId = 1,
+                title = "Published Post",
+                content = "This is published",
+            ) {
+                published = true
+            }
 
         assertThat(postRecord.userId).isEqualTo(1)
         assertThat(postRecord.title).isEqualTo("Published Post")
@@ -76,14 +80,15 @@ class DslUsageTest {
     @Test
     fun `post() DSLで全フィールドを設定`() {
         val timestamp = LocalDateTime.now()
-        val postRecord = post(
-            userId = 1,
-            title = "Complete Post",
-            content = "Full content",
-        ) {
-            published = false
-            createdAt = timestamp
-        }
+        val postRecord =
+            post(
+                userId = 1,
+                title = "Complete Post",
+                content = "Full content",
+            ) {
+                published = false
+                createdAt = timestamp
+            }
 
         assertThat(postRecord.userId).isEqualTo(1)
         assertThat(postRecord.title).isEqualTo("Complete Post")
@@ -94,11 +99,12 @@ class DslUsageTest {
 
     @Test
     fun `複数のUserRecordを生成できる`() {
-        val users = (1..5).map { index ->
-            user(name = "User $index", email = "user$index@example.com") {
-                age = 20 + index
+        val users =
+            (1..5).map { index ->
+                user(name = "User $index", email = "user$index@example.com") {
+                    age = 20 + index
+                }
             }
-        }
 
         assertThat(users).hasSize(5)
         assertThat(users.map { it.name })
@@ -109,15 +115,16 @@ class DslUsageTest {
 
     @Test
     fun `複数のPostRecordを生成できる`() {
-        val posts = (1..3).map { index ->
-            post(
-                userId = index,
-                title = "Post $index",
-                content = "Content of post $index",
-            ) {
-                published = index % 2 == 0
+        val posts =
+            (1..3).map { index ->
+                post(
+                    userId = index,
+                    title = "Post $index",
+                    content = "Content of post $index",
+                ) {
+                    published = index % 2 == 0
+                }
             }
-        }
 
         assertThat(posts).hasSize(3)
         assertThat(posts.map { it.title })

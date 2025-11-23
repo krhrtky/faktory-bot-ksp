@@ -72,11 +72,12 @@ class PostDslTest {
 
     @Test
     fun `post() 必須フィールドのみでPostRecordを構築`() {
-        val postRecord = post(
-            userId = 1,
-            title = "My First Post",
-            content = "Hello, World!",
-        )
+        val postRecord =
+            post(
+                userId = 1,
+                title = "My First Post",
+                content = "Hello, World!",
+            )
 
         assertThat(postRecord.userId).isEqualTo(1)
         assertThat(postRecord.title).isEqualTo("My First Post")
@@ -87,13 +88,14 @@ class PostDslTest {
 
     @Test
     fun `post() DSLブロックでオプショナルフィールドを設定`() {
-        val postRecord = post(
-            userId = 1,
-            title = "Published Post",
-            content = "This is published",
-        ) {
-            published = true
-        }
+        val postRecord =
+            post(
+                userId = 1,
+                title = "Published Post",
+                content = "This is published",
+            ) {
+                published = true
+            }
 
         assertThat(postRecord.userId).isEqualTo(1)
         assertThat(postRecord.title).isEqualTo("Published Post")
@@ -112,13 +114,14 @@ class PostDslTest {
         val insertedUser = dsl.selectFrom(USERS).fetchOne()
         assertThat(insertedUser).isNotNull
 
-        val postRecord = post(
-            userId = insertedUser!!.id!!,
-            title = "Alice's Post",
-            content = "Content by Alice",
-        ) {
-            published = true
-        }
+        val postRecord =
+            post(
+                userId = insertedUser!!.id!!,
+                title = "Alice's Post",
+                content = "Content by Alice",
+            ) {
+                published = true
+            }
         dsl.executeInsert(postRecord)
 
         val insertedPost = dsl.selectFrom(POSTS).fetchOne()
@@ -137,15 +140,16 @@ class PostDslTest {
         dsl.executeInsert(userRecord)
         val userId = dsl.selectFrom(USERS).fetchOne()!!.id!!
 
-        val posts = (1..3).map { index ->
-            post(
-                userId = userId,
-                title = "Post $index",
-                content = "Content of post $index",
-            ) {
-                published = index % 2 == 0
+        val posts =
+            (1..3).map { index ->
+                post(
+                    userId = userId,
+                    title = "Post $index",
+                    content = "Content of post $index",
+                ) {
+                    published = index % 2 == 0
+                }
             }
-        }
 
         posts.forEach { postRecord ->
             dsl.executeInsert(postRecord)
@@ -165,14 +169,15 @@ class PostDslTest {
     @Test
     fun `post() タイムスタンプを明示的に設定`() {
         val timestamp = java.time.LocalDateTime.now()
-        val postRecord = post(
-            userId = 1,
-            title = "Timestamped Post",
-            content = "Post with timestamp",
-        ) {
-            published = true
-            createdAt = timestamp
-        }
+        val postRecord =
+            post(
+                userId = 1,
+                title = "Timestamped Post",
+                content = "Post with timestamp",
+            ) {
+                published = true
+                createdAt = timestamp
+            }
 
         assertThat(postRecord.userId).isEqualTo(1)
         assertThat(postRecord.title).isEqualTo("Timestamped Post")

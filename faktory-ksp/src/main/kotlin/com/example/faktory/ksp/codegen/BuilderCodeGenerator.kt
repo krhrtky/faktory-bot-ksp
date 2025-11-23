@@ -6,7 +6,6 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
-import com.squareup.kotlinpoet.WildcardTypeName
 
 object BuilderCodeGenerator {
     fun generate(
@@ -20,33 +19,35 @@ object BuilderCodeGenerator {
 
         val typeParameter = TypeVariableName("S", stateClassName)
 
-        val builder = TypeSpec.interfaceBuilder(builderName).apply {
-            addTypeVariable(typeParameter)
+        val builder =
+            TypeSpec.interfaceBuilder(builderName).apply {
+                addTypeVariable(typeParameter)
 
-            metadata.requiredFields.forEach { fieldName ->
-                val methodName = "with${fieldName.toCamelCase()}"
-                val stateObjectName = "With${fieldName.toCamelCase()}"
-                val returnType = ClassName("", builderName)
-                    .parameterizedBy(ClassName("", stateName, stateObjectName))
+                metadata.requiredFields.forEach { fieldName ->
+                    val methodName = "with${fieldName.toCamelCase()}"
+                    val stateObjectName = "With${fieldName.toCamelCase()}"
+                    val returnType =
+                        ClassName("", builderName)
+                            .parameterizedBy(ClassName("", stateName, stateObjectName))
+
+                    addFunction(
+                        FunSpec.builder(methodName)
+                            .addParameter("value", String::class)
+                            .returns(returnType)
+                            .build(),
+                    )
+                }
+
+                val recordClass = ClassName("", recordClassName)
+                val completeState = ClassName("", stateName, "Complete")
 
                 addFunction(
-                    FunSpec.builder(methodName)
-                        .addParameter("value", String::class)
-                        .returns(returnType)
+                    FunSpec.builder("build")
+                        .addTypeVariable(TypeVariableName("S", completeState))
+                        .returns(recordClass)
                         .build(),
                 )
-            }
-
-            val recordClass = ClassName("", recordClassName)
-            val completeState = ClassName("", stateName, "Complete")
-
-            addFunction(
-                FunSpec.builder("build")
-                    .addTypeVariable(TypeVariableName("S", completeState))
-                    .returns(recordClass)
-                    .build(),
-            )
-        }.build()
+            }.build()
 
         return builder.toString()
     }

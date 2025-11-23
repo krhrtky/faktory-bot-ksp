@@ -11,6 +11,7 @@ class FactoryTest {
         private var email: String = "default@example.com"
 
         fun withName(value: String): UserBuilder = apply { name = value }
+
         fun withEmail(value: String): UserBuilder = apply { email = value }
 
         override fun build(): User = User(name, email)
@@ -41,10 +42,11 @@ class FactoryTest {
     @Test
     fun `builder allows customization`() {
         val factory = UserFactory()
-        val user = factory.builder()
-            .withName("Alice")
-            .withEmail("alice@example.com")
-            .build()
+        val user =
+            factory.builder()
+                .withName("Alice")
+                .withEmail("alice@example.com")
+                .build()
 
         assertThat(user.name).isEqualTo("Alice")
         assertThat(user.email).isEqualTo("alice@example.com")
