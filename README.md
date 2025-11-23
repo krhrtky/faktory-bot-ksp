@@ -1,207 +1,128 @@
 # faktory-bot-ksp
 
-KSP version of [faktory-bot](https://github.com/krhrtky/faktory-bot): Move runtime validation to compile-time type-level validation using Kotlin Symbol Processing.
+[![CI](https://github.com/krhrtky/faktory-bot-ksp/actions/workflows/ci.yml/badge.svg)](https://github.com/krhrtky/faktory-bot-ksp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Compile-time type-safe factory pattern for jOOQ test data generation using Kotlin Symbol Processing (KSP).
 
 ## Overview
 
-faktory-bot-ksp provides compile-time type-safe factory pattern for jOOQ with Kotlin Symbol Processing (KSP). It generates factory code that enforces NOT NULL constraints and required fields at compile time using Phantom Types.
+faktory-bot-ksp is a KSP version of [faktory-bot](https://github.com/krhrtky/faktory-bot) that moves runtime validation to **compile-time type-level validation**. It automatically generates type-safe DSL code from jOOQ metadata, enforcing NOT NULL constraints at compile time.
 
 ### Key Features
 
-- ✅ **Compile-time NOT NULL validation** using Phantom Types
-- ✅ **Type-safe builder pattern** with state tracking
-- ✅ **Automatic code generation** from jOOQ metadata via KSP
-- ✅ **jOOQ integration** for database persistence
-- ✅ **TDD implementation** with 100% test coverage
+- ✅ **Compile-time type safety** - Required fields enforced by Kotlin type system
+- ✅ **Kotlin DSL** - Natural, idiomatic Kotlin syntax
+- ✅ **Automatic code generation** - Zero-config code generation from jOOQ metadata via KSP
+- ✅ **jOOQ integration** - Seamless integration with jOOQ for database operations
+- ✅ **@DslMarker** - Scope control prevents DSL misuse
 
-## Comparison with Original faktory-bot
+### Comparison with Original faktory-bot
 
 | Feature | faktory-bot (Original) | faktory-bot-ksp |
 |---------|------------------------|-----------------|
-| NOT NULL validation | Runtime (RequiredAttributeValidator) | **Compile-time (Phantom Types)** |
+| NOT NULL validation | Runtime (RequiredAttributeValidator) | **Compile-time (Type System)** |
 | jOOQ Table resolution | Runtime (Reflection) | **Compile-time (KSP)** |
-| Factory definition validation | Runtime | **Compile-time (KSP)** |
-| build/create | Both persist to DB | build=memory, create=DB |
+| Factory definition | Runtime | **Compile-time (KSP)** |
+| API Style | Builder Pattern | **Kotlin DSL** |
 
-## Quick Start
-
-### 1. Add Dependencies
+## Quick Example
 
 ```kotlin
-// build.gradle.kts
-plugins {
-    kotlin("jvm") version "1.9.21"
-    id("com.google.devtools.ksp") version "1.9.21-1.0.15"
-}
+// 1. Define schema
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    age INT
+);
 
-dependencies {
-    implementation("com.example:faktory-runtime:1.0.0")
-    ksp("com.example:faktory-ksp:1.0.0")
-
-    // jOOQ
-    implementation("org.jooq:jooq:3.18.7")
-}
-```
-
-### 2. Define Factory
-
-```kotlin
-import com.example.faktory.ksp.Factory
-
+// 2. Define factory
 @Factory(tableName = "users")
 class UserFactory
-```
 
-### 3. Generated Code
+// 3. KSP generates type-safe DSL
+fun user(
+    name: String,      // NOT NULL → required parameter
+    email: String,     // NOT NULL → required parameter
+    block: UsersDslBuilder.() -> Unit = {}
+): UsersRecord
 
-KSP automatically generates:
-
-```kotlin
-sealed interface UsersFieldState {
-    object WithName : UsersFieldState
-    object WithEmail : UsersFieldState
-    object Complete : UsersFieldState
+// 4. Use the generated DSL
+val user = user(name = "Alice", email = "alice@example.com") {
+    age = 30  // Optional field
 }
 
-interface UsersFactoryBuilder<S : UsersFieldState> {
-    fun withName(value: String): UsersFactoryBuilder<UsersFieldState.WithName>
-    fun withEmail(value: String): UsersFactoryBuilder<UsersFieldState.WithEmail>
-    fun <S : UsersFieldState.Complete> build(): UsersRecord
-}
+// Compile error: missing required parameter
+val user = user(name = "Alice")  // ❌ email is required
+
+// Database persistence
+val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+dsl.executeInsert(user)
 ```
 
-### 4. Usage
+## Documentation
 
-```kotlin
-// Compile error: required fields not set
-val user = UserFactoryBuilder().build() // ❌
+📚 **[Complete Documentation](./docs/)** - Comprehensive guides and API reference
 
-// OK: all required fields set
-val user = UserFactoryBuilder()
-    .withName("Alice")
-    .withEmail("alice@example.com")
-    .build() // ✅
+### Quick Links
 
-// Persist to database
-class UserFactoryImpl(dsl: DSLContext) :
-    PersistableFactory<UsersRecord, User, UserBuilder>(dsl) {
+- **[Getting Started](./docs/guides/getting-started.md)** - Installation and setup
+- **[Usage Guide](./docs/guides/usage-guide.md)** - Detailed usage patterns
+- **[API Reference](./docs/api/api-reference.md)** - Complete API documentation
+- **[Troubleshooting](./docs/guides/troubleshooting.md)** - Common issues and solutions
 
-    override fun builder() = UserBuilder()
-    override fun table() = USERS
-    override fun toRecord(entity: User) = UsersRecord(...)
-}
+### Module Documentation
 
-val user = UserFactoryImpl(dsl).create() // Inserts to DB
-val users = UserFactoryImpl(dsl).createList(10) // Batch insert
+- **[faktory-ksp](./docs/modules/faktory-ksp.md)** - KSP processor internals
+- **[faktory-runtime](./docs/modules/faktory-runtime.md)** - Runtime library details
+
+## How It Works
+
+```
+┌─────────────────┐
+│  SQL Schema     │
+│  (schema.sql)   │
+└────────┬────────┘
+         │
+         v
+┌─────────────────┐
+│  jOOQ Codegen   │  ./gradlew generateJooq
+└────────┬────────┘
+         │
+         v
+┌─────────────────┐
+│  jOOQ Classes   │  UsersRecord, USERS table
+└────────┬────────┘
+         │
+         v
+┌─────────────────┐
+│  @Factory       │  @Factory(tableName = "users")
+│  Annotation     │  class UserFactory
+└────────┬────────┘
+         │
+         v
+┌─────────────────┐
+│  KSP Processor  │  ./gradlew kspKotlin
+│  - Extract NOT  │
+│    NULL fields  │
+│  - Generate DSL │
+└────────┬────────┘
+         │
+         v
+┌─────────────────┐
+│  Generated DSL  │  fun user(name: String, email: String, ...)
+│  - Type-safe    │
+│  - Compile-time │
+│    validation   │
+└─────────────────┘
 ```
 
-## Architecture
+For detailed architecture, see [faktory-ksp module documentation](./docs/modules/faktory-ksp.md).
 
-### Phase 1: KSP Foundation
-- JooqMetadataExtractor: Extract table metadata from jOOQ
-- ForeignKeyDetector: Detect FK constraints
-- FactoryCodeGenerator: Generate code with KotlinPoet
-- FactoryProcessor: Main KSP processor
+## Installation
 
-### Phase 2: Code Generation Engine
-- PhantomTypeGenerator: Generate type-level constraints
-- BuilderCodeGenerator: Generate type-parameterized builders
-- Complete integration of phantom types and builders
-
-### Phase 3: Runtime Foundation
-- Factory<T, B>: Base factory class
-- FactoryBuilder<T>: Builder interface
-- build() and buildList() methods
-
-### Phase 4: jOOQ Integration
-- PersistableFactory: DB persistence support
-- create() and createList() methods
-- DSLContext integration
-
-## Technical Highlights
-
-### Phantom Types for Type Safety
-
-```kotlin
-// State is tracked at type level
-type Initial = UsersFactoryBuilder<UsersFieldState.Initial>
-type WithName = UsersFactoryBuilder<UsersFieldState.WithName>
-type Complete = UsersFactoryBuilder<UsersFieldState.Complete>
-
-// Each method changes the state
-fun withName(...): WithName  // Initial → WithName
-fun withEmail(...): Complete // WithName → Complete
-fun build(): UsersRecord where S : Complete // Only callable when Complete
-```
-
-### Compile-time Metadata Extraction
-
-```kotlin
-// KSP analyzes jOOQ generated code at compile time
-val tableClass = resolver.getClassDeclarationByName("com.example.jooq.tables.Users")
-val requiredFields = tableClass.getAllProperties()
-    .filter { it.type.resolve().declaration.qualifiedName?.startsWith("org.jooq.TableField") }
-    .filter { !it.dataType.nullable() }
-    .map { it.simpleName.asString() }
-```
-
-## Development
-
-### Build
-
-```bash
-./gradlew build
-```
-
-### Run Tests
-
-```bash
-./gradlew test
-```
-
-All 20 test cases pass with 100% success rate.
-
-### Code Quality
-
-```bash
-# Run ktlint
-./gradlew ktlintCheck
-
-# Run detekt
-./gradlew detekt
-```
-
-## CI/CD
-
-This project uses GitHub Actions for continuous integration and deployment.
-
-### CI Workflow
-
-Runs on every push and pull request to `main`, `develop`, or `claude/**` branches:
-
-1. **Test**: Run all tests with JUnit
-2. **Lint**: Run ktlint for code style and detekt for static analysis
-3. **Build**: Build all modules and upload artifacts
-
-View CI status: [GitHub Actions](https://github.com/krhrtky/faktory-bot-ksp/actions)
-
-### Publishing to GitHub Packages
-
-To publish a new version:
-
-```bash
-# Tag the release
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-The publish workflow will:
-1. Run tests
-2. Build artifacts
-3. Publish `faktory-ksp` and `faktory-runtime` to GitHub Packages
-4. Create a GitHub release with artifacts
-
-### Using Published Packages
+### From GitHub Packages
 
 Add GitHub Packages repository to your `build.gradle.kts`:
 
@@ -223,17 +144,47 @@ dependencies {
 }
 ```
 
-Set your GitHub credentials in `~/.gradle/gradle.properties`:
+For detailed installation instructions, see [Getting Started](./docs/guides/getting-started.md).
 
-```properties
-gpr.user=YOUR_GITHUB_USERNAME
-gpr.token=YOUR_GITHUB_TOKEN
+## Development
+
+```bash
+# Build
+./gradlew build
+
+# Run tests
+./gradlew test
+
+# Code quality
+./gradlew ktlintCheck detekt
 ```
 
-## Repository
+### CI/CD
 
-https://github.com/krhrtky/faktory-bot-ksp
+[![CI](https://github.com/krhrtky/faktory-bot-ksp/actions/workflows/ci.yml/badge.svg)](https://github.com/krhrtky/faktory-bot-ksp/actions/workflows/ci.yml)
+
+GitHub Actions runs tests, linting, and builds on every push.
+
+View workflow status: [GitHub Actions](https://github.com/krhrtky/faktory-bot-ksp/actions)
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Read [Getting Started](./docs/guides/getting-started.md) to understand the project
+2. Check [existing issues](https://github.com/krhrtky/faktory-bot-ksp/issues)
+3. Submit pull requests with tests and documentation
+
+## Support
+
+- 📖 **[Documentation](./docs/)** - Complete guides and API reference
+- 🐛 **[Issue Tracker](https://github.com/krhrtky/faktory-bot-ksp/issues)** - Report bugs or request features
+- 💬 **[Discussions](https://github.com/krhrtky/faktory-bot-ksp/discussions)** - Ask questions and share ideas
 
 ## License
 
-MIT License
+MIT License - See [LICENSE](./LICENSE) for details
+
+---
+
+**Repository:** https://github.com/krhrtky/faktory-bot-ksp
