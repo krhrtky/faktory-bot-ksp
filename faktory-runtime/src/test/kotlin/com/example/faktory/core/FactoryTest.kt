@@ -51,4 +51,60 @@ class FactoryTest {
         assertThat(user.name).isEqualTo("Alice")
         assertThat(user.email).isEqualTo("alice@example.com")
     }
+
+    @Test
+    fun `afterBuild hook is called after build`() {
+        var hookCalled = false
+        var builtUser: User? = null
+
+        val factory =
+            object : Factory<User, UserBuilder>() {
+                override fun builder(): UserBuilder = UserBuilder()
+
+                override fun afterBuild(entity: User): User {
+                    hookCalled = true
+                    builtUser = entity
+                    return entity
+                }
+            }
+
+        val user = factory.build()
+
+        assertThat(hookCalled).isTrue()
+        assertThat(builtUser).isSameAs(user)
+    }
+
+    @Test
+    fun `afterBuild can modify entity`() {
+        val factory =
+            object : Factory<User, UserBuilder>() {
+                override fun builder(): UserBuilder = UserBuilder()
+
+                override fun afterBuild(entity: User): User =
+                    entity.copy(name = "${entity.name} (modified)")
+            }
+
+        val user = factory.build()
+
+        assertThat(user.name).isEqualTo("Default Name (modified)")
+    }
+
+    @Test
+    fun `afterBuild is called for each entity in buildList`() {
+        var callCount = 0
+
+        val factory =
+            object : Factory<User, UserBuilder>() {
+                override fun builder(): UserBuilder = UserBuilder()
+
+                override fun afterBuild(entity: User): User {
+                    callCount++
+                    return entity
+                }
+            }
+
+        factory.buildList(3)
+
+        assertThat(callCount).isEqualTo(3)
+    }
 }

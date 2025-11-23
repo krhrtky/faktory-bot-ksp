@@ -65,4 +65,142 @@ class PersistableFactoryTest {
 
         verify(exactly = 0) { dsl.executeInsert(any<TableRecord<*>>()) }
     }
+
+    @Test
+    fun `beforeCreate hook is called before persistence`() {
+        var hookCalled = false
+        var entityBeforeCreate: User? = null
+        val dsl = mockk<DSLContext>(relaxed = true)
+
+        val factory =
+            object : PersistableFactory<TestRecord, User, UserBuilder>(dsl) {
+                override fun builder(): UserBuilder = UserBuilder()
+
+                override fun table(): Table<TestRecord> = mockk()
+
+                override fun toRecord(entity: User): TestRecord = mockk()
+
+                override fun beforeCreate(entity: User): User {
+                    hookCalled = true
+                    entityBeforeCreate = entity
+                    return entity
+                }
+            }
+
+        val user = factory.create()
+
+        assertThat(hookCalled).isTrue()
+        assertThat(entityBeforeCreate).isNotNull()
+        assertThat(entityBeforeCreate?.name).isEqualTo(user.name)
+    }
+
+    @Test
+    fun `afterCreate hook is called after persistence`() {
+        var hookCalled = false
+        var entityAfterCreate: User? = null
+        val dsl = mockk<DSLContext>(relaxed = true)
+
+        val factory =
+            object : PersistableFactory<TestRecord, User, UserBuilder>(dsl) {
+                override fun builder(): UserBuilder = UserBuilder()
+
+                override fun table(): Table<TestRecord> = mockk()
+
+                override fun toRecord(entity: User): TestRecord = mockk()
+
+                override fun afterCreate(entity: User): User {
+                    hookCalled = true
+                    entityAfterCreate = entity
+                    return entity
+                }
+            }
+
+        val user = factory.create()
+
+        assertThat(hookCalled).isTrue()
+        assertThat(entityAfterCreate).isSameAs(user)
+    }
+
+    @Test
+    fun `beforeCreate can modify entity before persistence`() {
+        val dsl = mockk<DSLContext>(relaxed = true)
+
+        val factory =
+            object : PersistableFactory<TestRecord, User, UserBuilder>(dsl) {
+                override fun builder(): UserBuilder = UserBuilder()
+
+                override fun table(): Table<TestRecord> = mockk()
+
+                override fun toRecord(entity: User): TestRecord = mockk()
+
+                override fun beforeCreate(entity: User): User =
+                    entity.copy(name = "${entity.name} (validated)")
+            }
+
+        val user = factory.create()
+
+        assertThat(user.name).isEqualTo("Test User (validated)")
+    }
+
+    @Test
+    fun `afterCreate can modify entity after persistence`() {
+        val dsl = mockk<DSLContext>(relaxed = true)
+
+        val factory =
+            object : PersistableFactory<TestRecord, User, UserBuilder>(dsl) {
+                override fun builder(): UserBuilder = UserBuilder()
+
+                override fun table(): Table<TestRecord> = mockk()
+
+                override fun toRecord(entity: User): TestRecord = mockk()
+
+                override fun afterCreate(entity: User): User =
+                    entity.copy(id = 999)
+            }
+
+        val user = factory.create()
+
+        assertThat(user.id).isEqualTo(999)
+    }
+
+    @Test
+    fun `hooks are called in correct order for createList`() {
+        val callOrder = mutableListOf<String>()
+        val dsl = mockk<DSLContext>(relaxed = true)
+
+        val factory =
+            object : PersistableFactory<TestRecord, User, UserBuilder>(dsl) {
+                override fun builder(): UserBuilder = UserBuilder()
+
+                override fun table(): Table<TestRecord> = mockk()
+
+                override fun toRecord(entity: User): TestRecord = mockk()
+
+                override fun afterBuild(entity: User): User {
+                    callOrder.add("afterBuild")
+                    return entity
+                }
+
+                override fun beforeCreate(entity: User): User {
+                    callOrder.add("beforeCreate")
+                    return entity
+                }
+
+                override fun afterCreate(entity: User): User {
+                    callOrder.add("afterCreate")
+                    return entity
+                }
+            }
+
+        factory.createList(2)
+
+        assertThat(callOrder).containsExactly(
+            "afterBuild",
+            "beforeCreate",
+            "afterCreate",
+            "afterBuild",
+            "beforeCreate",
+            "afterCreate",
+        )
+    }
 }

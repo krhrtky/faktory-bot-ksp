@@ -11,11 +11,16 @@ abstract class PersistableFactory<R : TableRecord<R>, T : Any, B : FactoryBuilde
 
     abstract fun toRecord(entity: T): R
 
+    open fun beforeCreate(entity: T): T = entity
+
+    open fun afterCreate(entity: T): T = entity
+
     fun create(): T {
-        val entity = build()
-        val record = toRecord(entity)
+        val built = build()
+        val beforePersist = beforeCreate(built)
+        val record = toRecord(beforePersist)
         dsl.executeInsert(record)
-        return entity
+        return afterCreate(beforePersist)
     }
 
     fun createList(count: Int): List<T> = (1..count).map { create() }

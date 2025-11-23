@@ -5,7 +5,7 @@ import com.example.faktory.examples.jooq.tables.Posts.Companion.POSTS
 import com.example.faktory.examples.jooq.tables.records.PostsRecord
 import org.jooq.DSLContext
 
-class PostFactoryImpl(
+open class PostFactoryImpl(
     dsl: DSLContext,
 ) : PersistableFactory<PostsRecord, Post, PostBuilder>(dsl) {
     private val sequence = java.util.concurrent.atomic.AtomicInteger(0)
