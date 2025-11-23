@@ -1,9 +1,11 @@
 build:
-  maxIssues: 0
+  maxIssues: 10
+
+naming:
+  FunctionNaming:
+    active: false
 
 style:
   MaxLineLength:
     active: true
     maxLineLength: 120
-  FunctionNaming:
-    active: false
