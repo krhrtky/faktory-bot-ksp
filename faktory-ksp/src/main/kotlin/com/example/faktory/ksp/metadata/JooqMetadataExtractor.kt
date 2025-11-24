@@ -6,6 +6,7 @@ data class TableMetadata(
     val tableName: String,
     val requiredFields: List<String> = emptyList(),
     val optionalFields: List<String> = emptyList(),
+    val foreignKeys: List<ForeignKeyConstraint> = emptyList(),
 )
 
 object JooqMetadataExtractor {
@@ -19,11 +20,13 @@ object JooqMetadataExtractor {
             allFields
                 .filter { field -> field.dataType.nullable() }
                 .map { it.name }
+        val foreignKeys = ForeignKeyDetector.detect(table)
 
         return TableMetadata(
             tableName = table.name,
             requiredFields = requiredFields,
             optionalFields = optionalFields,
+            foreignKeys = foreignKeys,
         )
     }
 }

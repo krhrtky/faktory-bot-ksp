@@ -37,9 +37,21 @@ CREATE TABLE users (
     age INT
 );
 
-// 2. Define factory
+CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    published BOOLEAN,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+// 2. Define factories
 @Factory(tableName = "users")
 class UserFactory
+
+@Factory(tableName = "posts")
+class PostFactory
 
 // 3. KSP generates type-safe DSL
 fun user(
@@ -48,17 +60,37 @@ fun user(
     block: UsersDslBuilder.() -> Unit = {}
 ): UsersRecord
 
-// 4. Use the generated DSL
-val user = user(name = "Alice", email = "alice@example.com") {
-    age = 30  // Optional field
+fun post(
+    user: UsersRecord, // Foreign key → accepts parent record
+    title: String,
+    content: String,
+    block: PostsDslBuilder.() -> Unit = {}
+): PostsRecord
+
+// 4. Use in JUnit tests
+@Test
+fun `create user and post`() {
+    val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+    // Build and persist user
+    val userRecord = user(name = "Alice", email = "alice@example.com") {
+        age = 30
+    }
+    dsl.executeInsert(userRecord)
+    val savedUser = dsl.selectFrom(USERS).fetchOne()!!
+
+    // Build and persist post with foreign key
+    val postRecord = post(user = savedUser, title = "My Post", content = "Content") {
+        published = true
+    }
+    dsl.executeInsert(postRecord)
+
+    assertThat(postRecord.userId).isEqualTo(savedUser.id)
+    assertThat(postRecord.published).isTrue()
 }
 
 // Compile error: missing required parameter
 val user = user(name = "Alice")  // ❌ email is required
-
-// Database persistence
-val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
-dsl.executeInsert(user)
 ```
 
 ## Documentation
@@ -119,6 +151,83 @@ dsl.executeInsert(user)
 ```
 
 For detailed architecture, see [faktory-ksp module documentation](./docs/modules/faktory-ksp.md).
+
+## Generated Code Example
+
+KSP automatically generates DSL code from your `@Factory` annotations. Here's what gets generated:
+
+### Input: Factory Definition
+
+```kotlin
+@Factory(tableName = "users")
+class UserFactory
+
+@Factory(tableName = "posts")
+class PostFactory
+```
+
+### Output: Generated DSL
+
+**UsersDsl.kt:**
+```kotlin
+@FactoryDsl
+class UsersDslBuilder(
+    var name: String,
+    var email: String,
+) {
+    var age: Int? = null
+    var createdAt: LocalDateTime? = null
+
+    internal fun build(): UsersRecord = UsersRecord().apply {
+        this.name = this@UsersDslBuilder.name
+        this.email = this@UsersDslBuilder.email
+        this.age = this@UsersDslBuilder.age
+        this.createdAt = this@UsersDslBuilder.createdAt
+    }
+}
+
+fun user(
+    name: String,
+    email: String,
+    block: UsersDslBuilder.() -> Unit = {},
+): UsersRecord = UsersDslBuilder(name, email).apply(block).build()
+```
+
+**PostsDsl.kt:**
+```kotlin
+@FactoryDsl
+class PostsDslBuilder(
+    var user: UsersRecord,  // Foreign key accepts parent record
+    var title: String,
+    var content: String,
+) {
+    var published: Boolean? = null
+    var createdAt: LocalDateTime? = null
+
+    internal fun build(): PostsRecord = PostsRecord().apply {
+        this.userId = this@PostsDslBuilder.user.id  // Extract ID from parent
+        this.title = this@PostsDslBuilder.title
+        this.content = this@PostsDslBuilder.content
+        this.published = this@PostsDslBuilder.published
+        this.createdAt = this@PostsDslBuilder.createdAt
+    }
+}
+
+fun post(
+    user: UsersRecord,
+    title: String,
+    content: String,
+    block: PostsDslBuilder.() -> Unit = {},
+): PostsRecord = PostsDslBuilder(user, title, content).apply(block).build()
+```
+
+### Key Features of Generated Code
+
+1. **Type-safe parameters**: Required fields (NOT NULL) become constructor parameters
+2. **Optional fields**: Nullable fields become optional properties in DSL block
+3. **Foreign key handling**: Accepts parent record, extracts ID automatically
+4. **@DslMarker**: Prevents incorrect DSL nesting
+5. **snake_case → camelCase**: Converts database column names to Kotlin conventions
 
 ## Installation
 

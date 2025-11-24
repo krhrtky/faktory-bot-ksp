@@ -1,11 +1,13 @@
 plugins {
     kotlin("jvm")
+    id("com.google.devtools.ksp")
     id("nu.studer.jooq") version "8.2"
 }
 
 dependencies {
     implementation(project(":faktory-runtime"))
-    testImplementation(project(":faktory-ksp"))
+    implementation(project(":faktory-ksp"))
+    ksp(project(":faktory-ksp"))
 
     implementation("org.jooq:jooq:3.18.7")
     implementation("org.jooq:jooq-kotlin:3.18.7")
@@ -63,6 +65,7 @@ sourceSets {
     main {
         java {
             srcDir("build/generated-jooq")
+            srcDir("build/generated/ksp/main/kotlin")
         }
     }
 }

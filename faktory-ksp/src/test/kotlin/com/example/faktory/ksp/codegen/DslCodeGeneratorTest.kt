@@ -95,4 +95,27 @@ class DslCodeGeneratorTest {
         assertThat(code).contains("var firstName: String,")
         assertThat(code).contains("var lastName: String,")
     }
+
+    @Test
+    fun `generate foreign key field as Record type`() {
+        val metadata =
+            TableMetadata(
+                tableName = "posts",
+                requiredFields = listOf("user_id", "title", "content"),
+                optionalFields = listOf("published"),
+                foreignKeys =
+                    listOf(
+                        com.example.faktory.ksp.metadata.ForeignKeyConstraint(
+                            fieldName = "user_id",
+                            referencedTable = "users",
+                        ),
+                    ),
+            )
+
+        val code = DslCodeGenerator.generate("PostsRecord", metadata)
+
+        assertThat(code).contains("var user: UsersRecord,")
+        assertThat(code).doesNotContain("var userId:")
+        assertThat(code).contains("this.userId = this@PostsDslBuilder.user.id")
+    }
 }

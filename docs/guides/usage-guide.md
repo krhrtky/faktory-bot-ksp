@@ -315,15 +315,14 @@ dsl.batchInsert(users).execute()
 val userRecord = user(name = "Alice", email = "alice@example.com")
 dsl.executeInsert(userRecord)
 
-// 挿入されたユーザーのIDを取得
-val userId = dsl.selectFrom(USERS)
+// 挿入されたユーザーを取得
+val savedUser = dsl.selectFrom(USERS)
     .where(USERS.EMAIL.eq("alice@example.com"))
     .fetchOne()!!
-    .id!!
 
-// ユーザーIDを使用してポストを作成
+// ユーザーレコードを使用してポストを作成（外部キーは自動抽出）
 val postRecord = post(
-    userId = userId,
+    user = savedUser,  // UsersRecordを渡す
     title = "Alice's First Post",
     content = "Hello, World!"
 ) {
@@ -334,26 +333,115 @@ dsl.executeInsert(postRecord)
 
 ## 実践例
 
-### 基本的なテストデータ生成
+### パターン1: メモリ内テスト（DB不要）
+
+ビジネスロジックのテストでDBが不要な場合、DSL関数だけでテストデータを構築できます。
 
 ```kotlin
 import org.junit.jupiter.api.Test
 import org.assertj.core.api.Assertions.assertThat
-import org.testcontainers.containers.PostgreSQLContainer
 
-class UserServiceTest {
-    private val postgres = PostgreSQLContainer<Nothing>("postgres:15")
-    private val dsl: DSLContext by lazy {
-        DSL.using(postgres.jdbcUrl, postgres.username, postgres.password)
+class UserValidatorTest {
+    @Test
+    fun `メモリ内でUserRecordを構築してバリデーション`() {
+        // DBなしでレコード構築
+        val userRecord = user(name = "Alice", email = "alice@example.com") {
+            age = 30
+        }
+
+        // ビジネスロジックのテスト
+        val validator = UserValidator()
+        val result = validator.validate(userRecord)
+
+        assertThat(result.isValid).isTrue()
+        assertThat(userRecord.name).isEqualTo("Alice")
+        assertThat(userRecord.age).isEqualTo(30)
     }
 
     @Test
-    fun `ユーザーを作成できる`() {
+    fun `複数レコードを一括生成`() {
+        val users = (1..5).map { i ->
+            user(name = "User $i", email = "user$i@example.com") {
+                age = 20 + i
+            }
+        }
+
+        assertThat(users).hasSize(5)
+        assertThat(users.map { it.name })
+            .containsExactly("User 1", "User 2", "User 3", "User 4", "User 5")
+        assertThat(users.map { it.age })
+            .containsExactly(21, 22, 23, 24, 25)
+    }
+}
+```
+
+### パターン2: DB統合テスト（Testcontainers）
+
+実際のDBを使った統合テストの完全な例。
+
+```kotlin
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import org.assertj.core.api.Assertions.assertThat
+import org.jooq.SQLDialect
+import org.jooq.impl.DSL
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
+
+@Testcontainers
+class UserServiceIntegrationTest {
+    @Container
+    private val postgres = PostgreSQLContainer("postgres:16-alpine")
+        .withDatabaseName("testdb")
+        .withUsername("test")
+        .withPassword("test")
+
+    private lateinit var dataSource: HikariDataSource
+
+    @BeforeEach
+    fun setup() {
+        val config = HikariConfig().apply {
+            jdbcUrl = postgres.jdbcUrl
+            username = postgres.username
+            password = postgres.password
+            maximumPoolSize = 5
+        }
+        dataSource = HikariDataSource(config)
+
+        val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+        // テーブル作成
+        dsl.execute("""
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                age INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """.trimIndent())
+    }
+
+    @AfterEach
+    fun teardown() {
+        dataSource.close()
+    }
+
+    @Test
+    fun `ユーザーを作成してDBから取得できる`() {
+        val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+        // Build and persist
         val userRecord = user(name = "Alice", email = "alice@example.com") {
             age = 30
         }
         dsl.executeInsert(userRecord)
 
+        // Verify
         val inserted = dsl.selectFrom(USERS)
             .where(USERS.EMAIL.eq("alice@example.com"))
             .fetchOne()
@@ -363,7 +451,9 @@ class UserServiceTest {
     }
 
     @Test
-    fun `複数ユーザーを一括作成できる`() {
+    fun `複数ユーザーを一括挿入できる`() {
+        val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
         val users = (1..5).map { i ->
             user(name = "User $i", email = "user$i@example.com")
         }
@@ -375,7 +465,9 @@ class UserServiceTest {
 }
 ```
 
-### 外部キー制約を持つテーブル
+### パターン3: 外部キー制約を持つ統合テスト
+
+関連エンティティを含む実践的な統合テストの例。
 
 ```sql
 CREATE TABLE posts (
@@ -384,6 +476,7 @@ CREATE TABLE posts (
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     published BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 ```
@@ -394,40 +487,116 @@ class PostFactory
 
 // 生成されるDSL
 fun post(
-    userId: Int,
+    user: UsersRecord,  // Foreign key accepts parent record
     title: String,
     content: String,
     block: PostsDslBuilder.() -> Unit = {}
 ): PostsRecord
 
-// 使用例
-@Test
-fun `ユーザーとポストを作成できる`() {
-    // ユーザーを作成
-    val userRecord = user(name = "Alice", email = "alice@example.com")
-    dsl.executeInsert(userRecord)
+// 完全な統合テスト例
+@Testcontainers
+class PostServiceIntegrationTest {
+    @Container
+    private val postgres = PostgreSQLContainer("postgres:16-alpine")
 
-    val userId = dsl.selectFrom(USERS)
-        .where(USERS.EMAIL.eq("alice@example.com"))
-        .fetchOne()!!
-        .id!!
+    private lateinit var dataSource: HikariDataSource
 
-    // ポストを作成
-    val postRecord = post(
-        userId = userId,
-        title = "Alice's First Post",
-        content = "Hello, World!"
-    ) {
-        published = true
+    @BeforeEach
+    fun setup() {
+        dataSource = HikariDataSource(HikariConfig().apply {
+            jdbcUrl = postgres.jdbcUrl
+            username = postgres.username
+            password = postgres.password
+        })
+
+        val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+        // テーブル作成
+        dsl.execute("""
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                age INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        dsl.execute("""
+            CREATE TABLE posts (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                published BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
     }
-    dsl.executeInsert(postRecord)
 
-    val insertedPost = dsl.selectFrom(POSTS)
-        .where(POSTS.TITLE.eq("Alice's First Post"))
-        .fetchOne()
+    @Test
+    fun `ユーザーと関連ポストを作成できる`() {
+        val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
 
-    assertThat(insertedPost?.userId).isEqualTo(userId)
-    assertThat(insertedPost?.published).isTrue()
+        // 1. ユーザーを作成
+        val userRecord = user(name = "Alice", email = "alice@example.com")
+        dsl.executeInsert(userRecord)
+
+        val savedUser = dsl.selectFrom(USERS).fetchOne()!!
+
+        // 2. ポストを作成（外部キーは自動抽出）
+        val postRecord = post(
+            user = savedUser,  // UsersRecordを渡すだけ
+            title = "Alice's First Post",
+            content = "Hello, World!"
+        ) {
+            published = true
+        }
+        dsl.executeInsert(postRecord)
+
+        // 3. 検証
+        val insertedPost = dsl.selectFrom(POSTS).fetchOne()
+
+        assertThat(insertedPost?.userId).isEqualTo(savedUser.id)
+        assertThat(insertedPost?.title).isEqualTo("Alice's First Post")
+        assertThat(insertedPost?.published).isTrue()
+    }
+
+    @Test
+    fun `1人のユーザーに複数のポストを作成できる`() {
+        val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+        // ユーザーを作成
+        val userRecord = user(name = "Bob", email = "bob@example.com")
+        dsl.executeInsert(userRecord)
+        val savedUser = dsl.selectFrom(USERS).fetchOne()!!
+
+        // 複数ポストを生成
+        val posts = (1..3).map { i ->
+            post(
+                user = savedUser,
+                title = "Post $i",
+                content = "Content of post $i"
+            ) {
+                published = i % 2 == 0  // 偶数番号のみpublish
+            }
+        }
+
+        posts.forEach { dsl.executeInsert(it) }
+
+        // 検証
+        val insertedPosts = dsl.selectFrom(POSTS)
+            .orderBy(POSTS.ID)
+            .fetch()
+
+        assertThat(insertedPosts).hasSize(3)
+        assertThat(insertedPosts.map { it.title })
+            .containsExactly("Post 1", "Post 2", "Post 3")
+        assertThat(insertedPosts.map { it.published })
+            .containsExactly(false, true, false)
+        assertThat(insertedPosts.all { it.userId == savedUser.id }).isTrue()
+    }
 }
 ```
 

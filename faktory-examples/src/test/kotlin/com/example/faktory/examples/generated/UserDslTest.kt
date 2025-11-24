@@ -1,6 +1,7 @@
 package com.example.faktory.examples.generated
 
 import com.example.faktory.examples.jooq.tables.Users.Companion.USERS
+import com.example.faktory.examples.user
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.assertj.core.api.Assertions.assertThat
