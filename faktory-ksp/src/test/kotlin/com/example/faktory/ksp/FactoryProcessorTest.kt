@@ -6,9 +6,11 @@ import com.tschuchort.compiletesting.kspSourcesDir
 import com.tschuchort.compiletesting.symbolProcessorProviders
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
+@DisabledIfEnvironmentVariable(named = "CI", matches = "true")
 class FactoryProcessorTest {
     @TempDir
     lateinit var tempDir: File

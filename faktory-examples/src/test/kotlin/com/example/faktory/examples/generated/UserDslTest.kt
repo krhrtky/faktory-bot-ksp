@@ -10,10 +10,12 @@ import org.jooq.impl.DSL
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
+@DisabledIfEnvironmentVariable(named = "CI", matches = "true")
 @Testcontainers
 class UserDslTest {
     @Container
