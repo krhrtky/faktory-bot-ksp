@@ -78,7 +78,7 @@ object KspJooqMetadataExtractor {
             }
             .map { property ->
                 val fieldName = property.simpleName.asString().lowercase()
-                val referencedTable = fieldName.removeSuffix("_id")
+                val referencedTable = fieldName.removeSuffix("_id") + "s"
                 ForeignKeyConstraint(
                     fieldName = fieldName,
                     referencedTable = referencedTable,
