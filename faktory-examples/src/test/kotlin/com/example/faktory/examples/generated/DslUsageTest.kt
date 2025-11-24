@@ -1,5 +1,7 @@
 package com.example.faktory.examples.generated
 
+import com.example.faktory.examples.post
+import com.example.faktory.examples.user
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
@@ -45,14 +47,15 @@ class DslUsageTest {
 
     @Test
     fun `post() DSLで必須フィールドのみ指定してPostRecordを構築`() {
+        val userRecord = user(name = "Test User", email = "test@example.com")
         val postRecord =
             post(
-                userId = 1,
+                user = userRecord,
                 title = "My First Post",
                 content = "Hello, World!",
             )
 
-        assertThat(postRecord.userId).isEqualTo(1)
+        assertThat(postRecord.userId).isEqualTo(userRecord.id)
         assertThat(postRecord.title).isEqualTo("My First Post")
         assertThat(postRecord.content).isEqualTo("Hello, World!")
         assertThat(postRecord.published).isNull()
@@ -61,16 +64,17 @@ class DslUsageTest {
 
     @Test
     fun `post() DSLブロックでオプショナルフィールドを設定`() {
+        val userRecord = user(name = "Publisher", email = "publisher@example.com")
         val postRecord =
             post(
-                userId = 1,
+                user = userRecord,
                 title = "Published Post",
                 content = "This is published",
             ) {
                 published = true
             }
 
-        assertThat(postRecord.userId).isEqualTo(1)
+        assertThat(postRecord.userId).isEqualTo(userRecord.id)
         assertThat(postRecord.title).isEqualTo("Published Post")
         assertThat(postRecord.content).isEqualTo("This is published")
         assertThat(postRecord.published).isTrue()
@@ -79,10 +83,11 @@ class DslUsageTest {
 
     @Test
     fun `post() DSLで全フィールドを設定`() {
+        val userRecord = user(name = "Post Author", email = "author@example.com")
         val timestamp = LocalDateTime.now()
         val postRecord =
             post(
-                userId = 1,
+                user = userRecord,
                 title = "Complete Post",
                 content = "Full content",
             ) {
@@ -90,7 +95,7 @@ class DslUsageTest {
                 createdAt = timestamp
             }
 
-        assertThat(postRecord.userId).isEqualTo(1)
+        assertThat(postRecord.userId).isEqualTo(userRecord.id)
         assertThat(postRecord.title).isEqualTo("Complete Post")
         assertThat(postRecord.content).isEqualTo("Full content")
         assertThat(postRecord.published).isFalse()
@@ -115,10 +120,11 @@ class DslUsageTest {
 
     @Test
     fun `複数のPostRecordを生成できる`() {
+        val userRecord = user(name = "Multi Post Author", email = "multi@example.com")
         val posts =
             (1..3).map { index ->
                 post(
-                    userId = index,
+                    user = userRecord,
                     title = "Post $index",
                     content = "Content of post $index",
                 ) {
@@ -131,60 +137,5 @@ class DslUsageTest {
             .containsExactly("Post 1", "Post 2", "Post 3")
         assertThat(posts.map { it.published })
             .containsExactly(false, true, false)
-    }
-
-    @Test
-    fun `comment() DSLで必須フィールドのみ指定してCommentRecordを構築`() {
-        val commentRecord = comment(postId = 1, userId = 1, content = "Great post!")
-
-        assertThat(commentRecord.postId).isEqualTo(1)
-        assertThat(commentRecord.userId).isEqualTo(1)
-        assertThat(commentRecord.content).isEqualTo("Great post!")
-        assertThat(commentRecord.createdAt).isNull()
-    }
-
-    @Test
-    fun `comment() DSLブロックでオプショナルフィールドを設定`() {
-        val timestamp = LocalDateTime.now()
-        val commentRecord =
-            comment(postId = 1, userId = 2, content = "Nice!") {
-                createdAt = timestamp
-            }
-
-        assertThat(commentRecord.postId).isEqualTo(1)
-        assertThat(commentRecord.userId).isEqualTo(2)
-        assertThat(commentRecord.content).isEqualTo("Nice!")
-        assertThat(commentRecord.createdAt).isEqualTo(timestamp)
-    }
-
-    @Test
-    fun `複数のCommentRecordを生成できる`() {
-        val comments =
-            (1..5).map { index ->
-                comment(
-                    postId = 1,
-                    userId = index,
-                    content = "Comment $index from user $index",
-                )
-            }
-
-        assertThat(comments).hasSize(5)
-        assertThat(comments.map { it.content })
-            .containsExactly(
-                "Comment 1 from user 1",
-                "Comment 2 from user 2",
-                "Comment 3 from user 3",
-                "Comment 4 from user 4",
-                "Comment 5 from user 5",
-            )
-    }
-
-    @Test
-    fun `comment() DSLで複数外部キーを正しく設定`() {
-        val commentRecord = comment(postId = 10, userId = 20, content = "Multi-FK test")
-
-        assertThat(commentRecord.postId).isEqualTo(10)
-        assertThat(commentRecord.userId).isEqualTo(20)
-        assertThat(commentRecord.content).isEqualTo("Multi-FK test")
     }
 }

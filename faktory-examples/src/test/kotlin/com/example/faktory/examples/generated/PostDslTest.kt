@@ -2,6 +2,8 @@ package com.example.faktory.examples.generated
 
 import com.example.faktory.examples.jooq.tables.Posts.Companion.POSTS
 import com.example.faktory.examples.jooq.tables.Users.Companion.USERS
+import com.example.faktory.examples.post
+import com.example.faktory.examples.user
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.assertj.core.api.Assertions.assertThat
@@ -72,14 +74,20 @@ class PostDslTest {
 
     @Test
     fun `post() 必須フィールドのみでPostRecordを構築`() {
+        val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+        val userRecord = user(name = "Test User", email = "test@example.com")
+        dsl.executeInsert(userRecord)
+        val insertedUser = dsl.selectFrom(USERS).fetchOne()!!
+
         val postRecord =
             post(
-                userId = 1,
+                user = insertedUser,
                 title = "My First Post",
                 content = "Hello, World!",
             )
 
-        assertThat(postRecord.userId).isEqualTo(1)
+        assertThat(postRecord.userId).isEqualTo(insertedUser.id)
         assertThat(postRecord.title).isEqualTo("My First Post")
         assertThat(postRecord.content).isEqualTo("Hello, World!")
         assertThat(postRecord.published).isNull()
@@ -88,16 +96,22 @@ class PostDslTest {
 
     @Test
     fun `post() DSLブロックでオプショナルフィールドを設定`() {
+        val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+        val userRecord = user(name = "Test User 2", email = "test2@example.com")
+        dsl.executeInsert(userRecord)
+        val insertedUser = dsl.selectFrom(USERS).where(USERS.EMAIL.eq("test2@example.com")).fetchOne()!!
+
         val postRecord =
             post(
-                userId = 1,
+                user = insertedUser,
                 title = "Published Post",
                 content = "This is published",
             ) {
                 published = true
             }
 
-        assertThat(postRecord.userId).isEqualTo(1)
+        assertThat(postRecord.userId).isEqualTo(insertedUser.id)
         assertThat(postRecord.title).isEqualTo("Published Post")
         assertThat(postRecord.content).isEqualTo("This is published")
         assertThat(postRecord.published).isTrue()
@@ -116,7 +130,7 @@ class PostDslTest {
 
         val postRecord =
             post(
-                userId = insertedUser!!.id!!,
+                user = insertedUser!!,
                 title = "Alice's Post",
                 content = "Content by Alice",
             ) {
@@ -138,12 +152,12 @@ class PostDslTest {
 
         val userRecord = user(name = "Bob", email = "bob@example.com")
         dsl.executeInsert(userRecord)
-        val userId = dsl.selectFrom(USERS).fetchOne()!!.id!!
+        val insertedUser = dsl.selectFrom(USERS).fetchOne()!!
 
         val posts =
             (1..3).map { index ->
                 post(
-                    userId = userId,
+                    user = insertedUser,
                     title = "Post $index",
                     content = "Content of post $index",
                 ) {
@@ -168,10 +182,16 @@ class PostDslTest {
 
     @Test
     fun `post() タイムスタンプを明示的に設定`() {
+        val dsl = DSL.using(dataSource, SQLDialect.POSTGRES)
+
+        val userRecord = user(name = "Charlie", email = "charlie@example.com")
+        dsl.executeInsert(userRecord)
+        val insertedUser = dsl.selectFrom(USERS).where(USERS.EMAIL.eq("charlie@example.com")).fetchOne()!!
+
         val timestamp = java.time.LocalDateTime.now()
         val postRecord =
             post(
-                userId = 1,
+                user = insertedUser,
                 title = "Timestamped Post",
                 content = "Post with timestamp",
             ) {
@@ -179,7 +199,7 @@ class PostDslTest {
                 createdAt = timestamp
             }
 
-        assertThat(postRecord.userId).isEqualTo(1)
+        assertThat(postRecord.userId).isEqualTo(insertedUser.id)
         assertThat(postRecord.title).isEqualTo("Timestamped Post")
         assertThat(postRecord.content).isEqualTo("Post with timestamp")
         assertThat(postRecord.published).isTrue()

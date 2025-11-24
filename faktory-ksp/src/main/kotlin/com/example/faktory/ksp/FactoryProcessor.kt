@@ -1,6 +1,6 @@
 package com.example.faktory.ksp
 
-import com.example.faktory.ksp.codegen.FactoryCodeGenerator
+import com.example.faktory.ksp.codegen.DslCodeGenerator
 import com.example.faktory.ksp.metadata.KspJooqMetadataExtractor
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
@@ -32,25 +32,43 @@ class FactoryProcessor(
         val containingFile = classDeclaration.containingFile ?: return
 
         val tableName = extractTableName(classDeclaration) ?: return
-        val metadata = KspJooqMetadataExtractor.extract(tableName, resolver)
+        val factoryPackage = classDeclaration.packageName.asString()
 
-        val baseName = classDeclaration.simpleName.asString().removeSuffix("Factory")
-        val builderName = "${baseName}FactoryBuilder"
+        val baseName = tableName.split("_").joinToString("") { it.replaceFirstChar { c -> c.uppercaseChar() } }
         val recordClassName = "${baseName}Record"
 
-        val generatedCode =
-            FactoryCodeGenerator.generateComplete(
-                tableName = metadata.tableName,
-                recordClassName = recordClassName,
-                metadata = metadata,
-                foreignKeys = emptyList(),
-            )
+        val recordClass = findRecordClass(resolver, recordClassName)
+            ?: throw IllegalStateException("Record class not found: $recordClassName")
+
+        val recordPackage = recordClass.packageName.asString()
+        val tablePackage = recordPackage.replace(".records", "")
+
+        val packageInfo = PackageInfo(
+            factoryPackage = factoryPackage,
+            tablePackage = tablePackage,
+            recordPackage = recordPackage,
+        )
+
+        val metadata = KspJooqMetadataExtractor.extract(tableName, resolver, packageInfo)
+
+        val fileName = "${baseName}Dsl"
+        val generatedCode = DslCodeGenerator.generate(recordClassName, metadata, packageInfo)
 
         codeGenerator.createNewFile(
             dependencies = Dependencies(false, containingFile),
-            packageName = classDeclaration.packageName.asString(),
-            fileName = builderName,
+            packageName = factoryPackage,
+            fileName = fileName,
         ).bufferedWriter().use { it.write(generatedCode) }
+    }
+
+    private fun findRecordClass(
+        resolver: Resolver,
+        recordClassName: String,
+    ): KSClassDeclaration? {
+        return resolver.getAllFiles()
+            .flatMap { it.declarations }
+            .filterIsInstance<KSClassDeclaration>()
+            .firstOrNull { it.simpleName.asString() == recordClassName }
     }
 
     private fun extractTableName(classDeclaration: KSClassDeclaration): String? {

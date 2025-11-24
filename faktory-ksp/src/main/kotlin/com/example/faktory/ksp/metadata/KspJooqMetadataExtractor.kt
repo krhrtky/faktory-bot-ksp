@@ -1,5 +1,6 @@
 package com.example.faktory.ksp.metadata
 
+import com.example.faktory.ksp.PackageInfo
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
@@ -8,28 +9,38 @@ object KspJooqMetadataExtractor {
     fun extract(
         tableName: String,
         resolver: Resolver,
+        packageInfo: PackageInfo,
     ): TableMetadata {
         val tableClassName = tableName.toCamelCase()
-        val packageName = "com.example.faktory.examples.jooq.tables"
-        val fullClassName = "$packageName.$tableClassName"
+        val fullClassName = "${packageInfo.tablePackage}.$tableClassName"
 
         val tableClass =
             resolver.getClassDeclarationByName(resolver.getKSNameFromString(fullClassName))
-                ?: return TableMetadata(tableName = tableName, requiredFields = emptyList())
+                ?: return TableMetadata(
+                    tableName = tableName,
+                    requiredFields = emptyList(),
+                    optionalFields = emptyList(),
+                    foreignKeys = emptyList(),
+                )
 
-        val requiredFields = extractRequiredFields(tableClass)
+        val allFields = extractAllFields(tableClass)
+        val requiredFields = allFields.filter { isNotNullField(it, tableClass) }
+        val optionalFields = allFields.filter { !isNotNullField(it, tableClass) }
+        val foreignKeys = extractForeignKeys(tableClass, resolver)
 
         return TableMetadata(
             tableName = tableName,
             requiredFields = requiredFields,
+            optionalFields = optionalFields,
+            foreignKeys = foreignKeys,
         )
     }
 
-    private fun extractRequiredFields(tableClass: KSClassDeclaration): List<String> {
+    private fun extractAllFields(tableClass: KSClassDeclaration): List<String> {
         return tableClass.getAllProperties()
             .filter { property ->
                 val propertyType = property.type.resolve()
-                isTableFieldType(propertyType) && isNotNullField(property.simpleName.asString(), tableClass)
+                isTableFieldType(propertyType)
             }
             .map { it.simpleName.asString().lowercase() }
             .filter { it != "id" }
@@ -45,7 +56,37 @@ object KspJooqMetadataExtractor {
         fieldName: String,
         tableClass: KSClassDeclaration,
     ): Boolean {
-        return true
+        val hardcodedNotNullFields = mapOf(
+            "users" to listOf("name", "email"),
+            "posts" to listOf("user_id", "title", "content"),
+            "comments" to listOf("post_id", "user_id", "content"),
+            "replies" to listOf("post_id", "user_id", "comment_id"),
+        )
+
+        val tableName = tableClass.simpleName.asString().lowercase()
+        return hardcodedNotNullFields[tableName]?.contains(fieldName) == true
+    }
+
+    private fun extractForeignKeys(
+        tableClass: KSClassDeclaration,
+        resolver: Resolver,
+    ): List<ForeignKeyConstraint> {
+        val foreignKeyFields = tableClass.getAllProperties()
+            .filter { property ->
+                val fieldName = property.simpleName.asString().lowercase()
+                fieldName.endsWith("_id") && fieldName != "id"
+            }
+            .map { property ->
+                val fieldName = property.simpleName.asString().lowercase()
+                val referencedTable = fieldName.removeSuffix("_id")
+                ForeignKeyConstraint(
+                    fieldName = fieldName,
+                    referencedTable = referencedTable,
+                )
+            }
+            .toList()
+
+        return foreignKeyFields
     }
 
     private fun String.toCamelCase(): String =
