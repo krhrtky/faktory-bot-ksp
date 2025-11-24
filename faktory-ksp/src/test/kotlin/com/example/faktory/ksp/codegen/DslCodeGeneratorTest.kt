@@ -1,10 +1,17 @@
 package com.example.faktory.ksp.codegen
 
+import com.example.faktory.ksp.PackageInfo
 import com.example.faktory.ksp.metadata.TableMetadata
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class DslCodeGeneratorTest {
+    private val packageInfo = PackageInfo(
+        factoryPackage = "com.example.test.factory",
+        tablePackage = "com.example.test.table",
+        recordPackage = "com.example.test.record",
+    )
+
     @Test
     fun `generate DSL builder with required fields as constructor parameters`() {
         val metadata =
@@ -14,7 +21,7 @@ class DslCodeGeneratorTest {
                 optionalFields = listOf("age"),
             )
 
-        val code = DslCodeGenerator.generate("UsersRecord", metadata)
+        val code = DslCodeGenerator.generate("UsersRecord", metadata, packageInfo)
 
         assertThat(code).contains("class UsersDslBuilder(")
         assertThat(code).contains("var name: String,")
@@ -30,7 +37,7 @@ class DslCodeGeneratorTest {
                 optionalFields = listOf("age", "created_at"),
             )
 
-        val code = DslCodeGenerator.generate("UsersRecord", metadata)
+        val code = DslCodeGenerator.generate("UsersRecord", metadata, packageInfo)
 
         assertThat(code).contains("var age:")
         assertThat(code).contains("var createdAt:")
@@ -44,7 +51,7 @@ class DslCodeGeneratorTest {
                 requiredFields = listOf("name"),
             )
 
-        val code = DslCodeGenerator.generate("UsersRecord", metadata)
+        val code = DslCodeGenerator.generate("UsersRecord", metadata, packageInfo)
 
         assertThat(code).contains("@FactoryDsl")
         assertThat(code).contains("class UsersDslBuilder")
@@ -58,7 +65,7 @@ class DslCodeGeneratorTest {
                 requiredFields = listOf("name", "email"),
             )
 
-        val code = DslCodeGenerator.generate("UsersRecord", metadata)
+        val code = DslCodeGenerator.generate("UsersRecord", metadata, packageInfo)
 
         assertThat(code).contains("fun build(): UsersRecord")
         assertThat(code).contains("UsersRecord()")
@@ -73,7 +80,7 @@ class DslCodeGeneratorTest {
                 optionalFields = listOf("age"),
             )
 
-        val code = DslCodeGenerator.generate("UsersRecord", metadata)
+        val code = DslCodeGenerator.generate("UsersRecord", metadata, packageInfo)
 
         assertThat(code).contains("fun user(")
         assertThat(code).contains("name: String,")
@@ -90,7 +97,7 @@ class DslCodeGeneratorTest {
                 requiredFields = listOf("first_name", "last_name"),
             )
 
-        val code = DslCodeGenerator.generate("UsersRecord", metadata)
+        val code = DslCodeGenerator.generate("UsersRecord", metadata, packageInfo)
 
         assertThat(code).contains("var firstName: String,")
         assertThat(code).contains("var lastName: String,")
@@ -112,7 +119,7 @@ class DslCodeGeneratorTest {
                     ),
             )
 
-        val code = DslCodeGenerator.generate("PostsRecord", metadata)
+        val code = DslCodeGenerator.generate("PostsRecord", metadata, packageInfo)
 
         assertThat(code).contains("var user: UsersRecord,")
         assertThat(code).doesNotContain("var userId:")

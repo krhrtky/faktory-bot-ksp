@@ -59,7 +59,7 @@ object DslCodeGenerator {
                 val foreignKey = foreignKeyMap[fieldName]
                 if (foreignKey != null) {
                     val paramName = fieldName.removeSuffix("_id").toCamelCase()
-                    val refRecordClassName = "${foreignKey.toPascalCase()}sRecord"
+                    val refRecordClassName = "${foreignKey.toPascalCase()}Record"
                     ParameterSpec.builder(
                         paramName,
                         ClassName(packageInfo.recordPackage, refRecordClassName),
@@ -77,7 +77,7 @@ object DslCodeGenerator {
                 val foreignKey = foreignKeyMap[fieldName]
                 if (foreignKey != null) {
                     val paramName = fieldName.removeSuffix("_id").toCamelCase()
-                    val refRecordClassName = "${foreignKey.toPascalCase()}sRecord"
+                    val refRecordClassName = "${foreignKey.toPascalCase()}Record"
                     PropertySpec.builder(
                         paramName,
                         ClassName(packageInfo.recordPackage, refRecordClassName),
@@ -174,7 +174,7 @@ object DslCodeGenerator {
                 val foreignKey = foreignKeyMap[fieldName]
                 if (foreignKey != null) {
                     val paramName = fieldName.removeSuffix("_id").toCamelCase()
-                    val refRecordClassName = "${foreignKey.toPascalCase()}sRecord"
+                    val refRecordClassName = "${foreignKey.toPascalCase()}Record"
                     ParameterSpec.builder(
                         paramName,
                         ClassName(packageInfo.recordPackage, refRecordClassName),
